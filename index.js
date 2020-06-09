@@ -1,3 +1,4 @@
+const os = require('os');
 const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
@@ -28,10 +29,9 @@ const argv = yargs
   })
   .option('P', {
     alias: 'max-procs',
-    default: 1,
-    describe: 'Run up to max-procs processes at a time',
+    default: os.cpus().length,
+    describe: 'Run up to max-procs processes concurrently',
     type: 'number',
-    required: true,
     requiresArg: 1,
   })
   .option('xargs', {
@@ -266,16 +266,6 @@ module.exports = async () => {
     logger.fatal('During parameter read:', e);
     return 1;
   }
-
-  // try {
-  //   await program.validate(argv);
-  // } catch (e) {
-  //   logger.fatal('During program vaidate:', e);
-  //   return 1;
-  // }
-
-  // FIXME
-  await program.execute(argv, pars, 'hash');
 
   return 0;
 };
