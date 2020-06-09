@@ -1,5 +1,7 @@
+const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
+const logger = require('./logger');
 
 const argv = yargs
   .scriptName('findbug')
@@ -157,4 +159,16 @@ const argv = yargs
   })
   .argv;
 
-console.log(argv);
+if (argv.verbose >= 2) {
+  logger.level = 'debug';
+} else if (argv.verbose >= 1) {
+  logger.level = 'info';
+}
+
+if (argv.logFile) {
+  logger.useLogFile(path.join(argv.o, argv.logFile));
+}
+
+module.exports = async () => {
+  logger.debug('argv:', argv);
+}
