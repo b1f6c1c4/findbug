@@ -1,3 +1,5 @@
 #!/usr/bin/env node
 
-require('../')().then(process.exit);
+require('../')().then((c) => {
+  setTimeout(() => process.exit(c), 10);
+});

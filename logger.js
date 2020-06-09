@@ -53,7 +53,20 @@ const logger = createLogger({
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.sssZZ' }),
     format.errors({ stack: true }),
-    format.printf(info => `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`),
+    format.printf((info) => {
+      const msg = `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`;
+      if (info.data === undefined) {
+        return msg;
+      }
+      if (info.data instanceof Error) {
+        return `${msg} ${info.data.stack}`;
+      }
+      const data = stringify(info.data, null, 2);
+      if (data.includes('\n')) {
+        return `${msg}\n${data}`;
+      }
+      return `${msg} ${data}`;
+    }),
   ),
   transports: [tc],
 });
@@ -74,7 +87,13 @@ module.exports = (lbl) => {
   };
   const customApi = {};
   customApi.setLevel = (level) => {
-    tc.level = level;
+    if (level === null) {
+      tc.level = 'fatal';
+      tc.silent = true;
+    } else {
+      tc.level = level;
+      tc.silent = false;
+    }
   };
   customApi.useLogFile = (filename) => {
     logger.add(new transports.File({

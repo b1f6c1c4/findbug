@@ -1,7 +1,10 @@
 const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
+const rimraf = require('rimraf');
+const timespan = require('timespan-parser');
 const parameter = require('./parameter');
+const program = require('./program');
 const logger = require('./logger')('main');
 
 const argv = yargs
@@ -15,13 +18,11 @@ const argv = yargs
   .alias('h', 'help')
   .showHelpOnFail(false, 'Hint: You may need this: findbug --help')
   .version()
-  .option('c', {
-    alias: 'config',
-    describe: 'Read options from the JSON5 config file',
-  })
+  .alias('c', 'config')
   .config('c', (p) => JSON5.parse(fs.readFileSync(p, 'utf-8')))
-  .group(['C', 'P', 'xargs'], 'Program Execution Control:')
+  .group(['C', 'P', 'xargs', '1'], 'Program Execution Control:')
   .option('C', {
+    alias: 'cwd',
     describe: 'Specify the cwd of the program',
     type: 'string',
   })
@@ -35,6 +36,11 @@ const argv = yargs
   })
   .option('xargs', {
     describe: 'Parameters are provided to the program using arguments instead of stdin',
+    type: 'boolean',
+  })
+  .option('1', {
+    alias: 'one',
+    describe: 'At least one parameter is required to run the program',
     type: 'boolean',
   })
   .group(['a', 'args-as-pars', 'split', 'split-by'], 'Debug Parameter Control:')
@@ -57,11 +63,7 @@ const argv = yargs
     requiresArg: 1,
   })
   .implies('split-by', 'split')
-  .option('1', {
-    alias: 'one',
-    describe: 'At least one parameter is required to run the program',
-    type: 'boolean',
-  })
+  .implies('split', 'xargs')
   .conflicts('a', 'self')
   .group(['zero', 'non-zero', 'stdout', 'stderr'], 'Success / Failure / Error Detection:')
   .option('zero', {
@@ -75,6 +77,18 @@ const argv = yargs
     choices: ['ignore', 'fail', 'error'],
     default: 'fail',
     describe: 'Meaning of getting non-zero exit code',
+    type: 'string',
+    requiresArg: 1,
+  })
+  .option('time-limit', {
+    describe: 'Maximum execution time (ms, s, m, h, ...)',
+    type: 'string',
+    requiresArg: 1,
+  })
+  .option('timeout', {
+    choices: ['ignore', 'fail', 'error'],
+    default: 'ignore',
+    describe: 'Meaning of not quitting before a deadline',
     type: 'string',
     requiresArg: 1,
   })
@@ -108,10 +122,15 @@ const argv = yargs
   .group(['v', 'o', 'log-file', 'prune'], 'Output and Caching Control:')
   .option('v', {
     alias: 'verbose',
-    describe: 'Print intermediate steps, can be repeated',
+    describe: 'Increase verbosity by 1',
     type: 'boolean',
   })
-  .count('v')
+  .option('q', {
+    alias: 'quiet',
+    describe: 'Decrease verbosity by 1',
+    type: 'boolean',
+  })
+  .count(['v', 'q'])
   .option('o', {
     default: '.findbug-work',
     describe: 'A directory to store program outputs, also used as cache',
@@ -125,6 +144,12 @@ const argv = yargs
   .option('prune', {
     describe: 'Remove the entire output directory before proceed',
     type: 'boolean',
+  })
+  .check((argv) => {
+    if (argv.verbose > 0 && argv.quiet > 0)
+      throw new Error('Argument check failed: You cannot specify both of -v and -q');
+    argv.verbosity = argv.verbose - argv.quiet;
+    return true;
   })
   .check((argv) => {
     const p = argv['--'];
@@ -155,31 +180,49 @@ const argv = yargs
     return true;
   })
   .check((argv) => {
-    if (!(argv.zero === 'fail' || argv.nonZero === 'fail' || argv.stdout === 'fail' || argv.stderr === 'fail'))
-      throw new Error('Argument check failed: At least one of --zero, --non-zero, --stdout, --stderr need to be \'fail\'');
-    if (argv.zero === 'fail' && argv.nonZero === 'fail')
-      throw new Error('Argument check failed: --zero and --non-zero cannot both be \'fail\'');
-    if (argv.zero === 'error' && argv.nonZero === 'error')
-      throw new Error('Argument check failed: --zero and --non-zero cannot both be \'error\'');
+    if (!(argv.zero === 'fail' || argv.nonZero === 'fail' || argv.timeout === 'fail' || argv.stdout === 'fail' || argv.stderr === 'fail'))
+      throw new Error('Argument check failed: At least one of --zero, --non-zero, --timeout, --stdout, --stderr need to be \'fail\'');
+    if (!argv.timeLimit) {
+      if (argv.timeout !== 'ignore')
+        throw new Error('Argument check failed: You must specify --time-limit if you\'ve specified --timeout');
+      if (argv.zero === 'fail' && argv.nonZero === 'fail')
+        throw new Error('Argument check failed: --zero and --non-zero cannot both be \'fail\' when --time-limit is not specified');
+      if (argv.zero === 'error' && argv.nonZero === 'error')
+        throw new Error('Argument check failed: --zero and --non-zero cannot both be \'error\' when --time-limit is not specified');
+    } else if (argv.timeout === 'ignore') {
+      throw new Error('Argument check failed: You must not use --timeout=ignore when you\'v specified --time-limit');
+    }
     return true;
   })
   .argv;
 
-if (argv.verbose >= 3) {
+if (argv.verbosity >= 3) {
   logger.setLevel('trace');
-} else if (argv.verbose >= 2) {
+} else if (argv.verbosity >= 2) {
   logger.setLevel('debug');
-} else if (argv.verbose >= 1) {
+} else if (argv.verbosity >= 1) {
   logger.setLevel('info');
-} else {
+} else if (argv.verbosity >= 0) {
   logger.setLevel('notice');
+} else if (argv.verbosity >= -1) {
+  logger.setLevel('warning');
+} else if (argv.verbosity >= -2) {
+  logger.setLevel('error');
+} else if (argv.verbosity >= -3) {
+  logger.setLevel('fatal');
+} else {
+  logger.setLevel(null);
+}
+
+if (argv.prune) {
+  logger.warning('Pruning the output directory:', argv.o);
+  rimraf.sync(argv.o, { disableGlob: true });
+  logger.notice('Done pruning the output directory');
 }
 
 if (argv.logFile) {
   logger.useLogFile(path.join(argv.o, argv.logFile));
 }
-
-logger.debug('Versions', process.versions);
 
 process.on('unhandledRejection', (e) => {
   logger.fatal('Unhandled rejection', e);
@@ -205,6 +248,13 @@ process.on('SIGTERM', () => {
 
 module.exports = async () => {
   logger.debug('argv:', argv);
+
+  if (argv.timeLimit) {
+    logger.debug('Parsing --time-limit:', argv.timeLimit);
+    argv.timeLimit = timespan.parse(argv.timeLimit, 'ms');
+    logger.info('--time-limit in millisecond:', argv.timeLimit);
+  }
+
   let pars;
   try {
     pars = await parameter.parse(argv);
@@ -216,5 +266,16 @@ module.exports = async () => {
     logger.fatal('During parameter read:', e);
     return 1;
   }
+
+  // try {
+  //   await program.validate(argv);
+  // } catch (e) {
+  //   logger.fatal('During program vaidate:', e);
+  //   return 1;
+  // }
+
+  // FIXME
+  await program.execute(argv, pars, 'hash');
+
   return 0;
 };

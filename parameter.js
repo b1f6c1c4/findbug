@@ -2,11 +2,13 @@ const readline = require('readline');
 const fs = require('fs');
 const logger = require('./logger')('parameter');
 
-module.exports.parse = async ({ argFile, argAsPars, args }) => {
+module.exports.parse = async ({ argFile, argsAsPars, args }) => {
   let res;
-  if (argAsPars) {
+  if (argsAsPars) {
     logger.info('Using arguments as parameters');
     res = [...args];
+    args.length = 0;
+    logger.debug('argv.args was cleared:', args);
   } else {
     let input;
     if (!argFile) {
