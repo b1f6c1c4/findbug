@@ -15,6 +15,7 @@
   "author": "b1f6c1c4 b1f6c1c4@gmail.com",
   "license": "MIT",
   "dependencies": {
+    "chalk": "^4.1.0",
     "json-stringify-safe": "^5.0.1",
     "json5": "^2.1.3",
     "winston": "^3.2.1",

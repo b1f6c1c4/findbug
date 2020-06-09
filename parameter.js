@@ -1,21 +1,44 @@
 const readline = require('readline');
 const fs = require('fs');
+const logger = require('./logger')('parameter');
 
-module.exports.parse = async ({ argFile, argAsPars }) => {
-  let input = process.stdin;
-  if (argFile) {
-    input = await new Promise((resolve, reject) => {
-      const s = fs.createReadStream(argFile);
-      s.on('open', () => { resolve(s); });
-      s.on('error', reject);
+module.exports.parse = async ({ argFile, argAsPars, args }) => {
+  let res;
+  if (argAsPars) {
+    logger.info('Using arguments as parameters');
+    res = [...args];
+  } else {
+    let input;
+    if (!argFile) {
+      logger.info('Reading parameters from stdin');
+      input = process.stdin;
+    } else {
+      input = await new Promise((resolve, reject) => {
+        logger.info('Reading parameters from file:', argFile);
+        const s = fs.createReadStream(argFile);
+        s.on('open', () => {
+          logger.debug('File opened:', argFile);
+          resolve(s);
+        });
+        s.on('error', reject);
+      });
+    }
+    const rl = readline.createInterface({
+      input,
+    });
+    res = await new Promise((resolve) => {
+      const res = [];
+      rl.on('line', (line) => {
+        logger.trace('Line received:', line);
+        res.push(line);
+      });
+      rl.on('close', () => {
+        logger.debug('Line read finished');
+        resolve(res);
+      });
     });
   }
-  const rl = readline.createInterface({
-    input,
-  });
-  return new Promise((resolve) => {
-    const res = [];
-    rl.on('line', (line) => { res.push(line); });
-    rl.on('end', () => { resolve(res); });
-  });
+  logger.notice('Got # of parameters:', res.length);
+  logger.trace('Parameters:', res);
+  return res;
 };

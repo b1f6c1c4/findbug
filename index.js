@@ -1,7 +1,8 @@
 const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
-const logger = require('./logger');
+const parameter = require('./parameter');
+const logger = require('./logger')('main');
 
 const argv = yargs
   .scriptName('findbug')
@@ -56,6 +57,11 @@ const argv = yargs
     requiresArg: 1,
   })
   .implies('split-by', 'split')
+  .option('1', {
+    alias: 'one',
+    describe: 'At least one parameter is required to run the program',
+    type: 'boolean',
+  })
   .conflicts('a', 'self')
   .group(['zero', 'non-zero', 'stdout', 'stderr'], 'Success / Failure / Error Detection:')
   .option('zero', {
@@ -159,16 +165,56 @@ const argv = yargs
   })
   .argv;
 
-if (argv.verbose >= 2) {
-  logger.level = 'debug';
+if (argv.verbose >= 3) {
+  logger.setLevel('trace');
+} else if (argv.verbose >= 2) {
+  logger.setLevel('debug');
 } else if (argv.verbose >= 1) {
-  logger.level = 'info';
+  logger.setLevel('info');
+} else {
+  logger.setLevel('notice');
 }
 
 if (argv.logFile) {
   logger.useLogFile(path.join(argv.o, argv.logFile));
 }
 
+logger.debug('Versions', process.versions);
+
+process.on('unhandledRejection', (e) => {
+  logger.fatal('Unhandled rejection', e);
+});
+
+process.on('uncaughtException', (e) => {
+  logger.fatal('Uncaught exception', e);
+});
+
+process.on('warning', (e) => {
+  logger.warning('Node warning', e);
+});
+
+process.on('SIGINT', () => {
+  logger.fatal('SIGINT received');
+  process.exit(128 + 2);
+});
+
+process.on('SIGTERM', () => {
+  logger.fatal('SIGTERM received');
+  process.exit(128 + 15);
+});
+
 module.exports = async () => {
   logger.debug('argv:', argv);
-}
+  let pars;
+  try {
+    pars = await parameter.parse(argv);
+    if (argv.one && pars.length === 0) {
+      logger.fatal('At least one parameter is required, due to --one');
+      return 2;
+    }
+  } catch (e) {
+    logger.fatal('During parameter read:', e);
+    return 1;
+  }
+  return 0;
+};

@@ -1,54 +1,89 @@
-const { createLogger, format, transports } = require('winston');
+const { addColors, createLogger, format, transports } = require('winston');
+const chalk = require('chalk');
 const stringify = require('json-stringify-safe');
 
-const levels = {
-  debug: 0,
-  info: 1,
-  notice: 2,
-  warning: 3,
-  error: 4,
+const lvls = {
+  levels: {
+    fatal: 0,
+    error: 1,
+    warning: 2,
+    notice: 3,
+    info: 4,
+    debug: 5,
+    trace: 6,
+  },
+  colors: {
+    fatal: 'underline dim red',
+    error: 'bold red',
+    warning: 'bold yellow',
+    notice: 'brightMagenta',
+    info: 'brightGreen',
+    debug: 'dim cyan',
+    trace: 'gray',
+  },
 };
 
-const logger = createLogger({
+addColors(lvls);
+
+const tc = new transports.Console({
   level: 'notice',
-  levels,
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss' }),
+    format.colorize({ all: true }),
+    format.printf((info) => {
+      const msg = chalk`{gray ${info.timestamp}} [${info.label}] ${info.level}: ${info.message}`;
+      if (info.data === undefined) {
+        return msg;
+      }
+      if (info.data instanceof Error) {
+        return `${msg} ${info.data.stack}`;
+      }
+      const data = stringify(info.data, null, 2);
+      if (data.includes('\n')) {
+        return `${msg}\n${data}`;
+      }
+      return `${msg} ${data}`;
+    }),
+  ),
+});
+
+const logger = createLogger({
+  level: 'trace',
+  levels: lvls.levels,
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.sssZZ' }),
     format.errors({ stack: true }),
-    format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
+    format.printf(info => `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`),
   ),
-  transports: [
-    new transports.Console({
-      format: format.combine(
-        format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.sssZZ' }),
-        format.errors({ stack: true }),
-        format.colorize(),
-        format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
-      ),
-    }),
-  ],
+  transports: [tc],
 });
 
-const make = (level) => function (...args) {
-  this.log({
-    level,
-    message: args.reduce((so, o) => {
-      let s;
-      if (o !== null && typeof o === 'object')
-        s = stringify(o, null, 2);
-      else
-        s = '' + o;
-      if (so === undefined)
-        return s;
-      return so + ' ' + s;
-    }, undefined),
+module.exports = (lbl) => {
+  const regularize = (k) => (msg, data, extra) => {
+    let message = msg;
+    if (message === undefined) {
+      message = 'undefined';
+    }
+    logger.log({
+      level: k,
+      label: lbl || 'default',
+      message,
+      data,
+      extra,
+    });
+  };
+  const customApi = {};
+  customApi.setLevel = (level) => {
+    tc.level = level;
+  };
+  customApi.useLogFile = (filename) => {
+    logger.add(new transports.File({
+      level: 'trace',
+      filename,
+    }));
+  };
+  Object.keys(lvls.levels).forEach((level) => {
+    customApi[level] = regularize(level);
   });
+  return customApi;
 };
-
-module.exports = logger;
-module.exports.useLogFile = (filename) => {
-  logger.add(new transports.File({ filename }));
-};
-Object.keys(levels).forEach((level) => {
-  module.exports[level] = make(level);
-});
