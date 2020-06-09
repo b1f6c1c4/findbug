@@ -3,6 +3,7 @@ const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
 const rimraf = require('rimraf');
+const objhash = require('object-hash');
 const timespan = require('timespan-parser');
 const parameter = require('./parameter');
 const program = require('./program');
@@ -258,13 +259,19 @@ module.exports = async () => {
   let pars;
   try {
     pars = await parameter.parse(argv);
-    if (argv.one && pars.length === 0) {
+    if (argv.one && !pars.length) {
       logger.fatal('At least one parameter is required, due to --one');
       return 2;
     }
   } catch (e) {
     logger.fatal('During parameter read:', e);
     return 1;
+  }
+
+  if (argv.invariant) {
+    await parameter.runInvariant(argv, pars, async (ps) => {
+      return program.execute(argv, ps, objhash(ps));
+    });
   }
 
   return 0;
