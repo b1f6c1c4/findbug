@@ -50,10 +50,28 @@ module.exports.parse = async ({ argFile, argsAsPars, args }) => {
 module.exports.runInvariant = async (argv, p, runner) => {
   logger.info('Use invariant strategy');
   const overall = (argv.one ? -1 : 0) + 2 ** p.length;
-  logger.info('Total cases:', overall);
+  logger.info('Total search space:', overall);
+
   const limiter = new Bottleneck({
     maxConcurrent: argv.maxProcs,
   });
+
+  const impl = (dir) => async () => {
+    // The starting place
+    let N = dir ? (argv.one ? 1 : 0) : p.length;
+  };
+
+  const pros = [];
+  if (argv.max) {
+    logger.info('Searching upwards');
+    pros.push(invariantImpl(true));
+  }
+  if (argv.min) {
+    logger.info('Searching downwards');
+    pros.push(invariantImpl(false));
+  }
+  await Promise.all(pros);
+
   logger.info('Started enumeration');
   const cmb = Combinatorics.power(p);
   logger.info('Finished enumeration');
@@ -75,7 +93,10 @@ module.exports.runInvariant = async (argv, p, runner) => {
     };
     fun();
   });
-  logger.notice('Total success:', obj.success);
-  logger.notice('Total fail:', obj.fail);
-  logger.notice('Total error:', obj.error);
+};
+
+module.exports.runCovariant = async (argv, p, runner) => {
+};
+
+module.exports.runContravariant = async (argv, p, runner) => {
 };

@@ -15,6 +15,7 @@
   "author": "b1f6c1c4 b1f6c1c4@gmail.com",
   "license": "MIT",
   "dependencies": {
+    "@datastructures-js/priority-queue": "^4.1.1",
     "bottleneck": "^2.19.5",
     "chalk": "^4.1.0",
     "js-combinatorics": "^0.5.5",
