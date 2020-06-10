@@ -1,5 +1,6 @@
 #include "elem.hpp"
 #include <bit>
+#include <algorithm>
 #include "homo_set.hpp"
 #include "util.hpp"
 
@@ -126,8 +127,4 @@ size_t elem::hasher::operator()(const elem &el) const {
     for (auto v : el._v)
         h = (h >> 59ull) | v | (h << 5ull);
     return h;
-}
-
-constexpr bool elem::hier_cmp::operator()(const elem &a, const elem &b) const {
-    return a.hier() < b.hier();
 }

@@ -74,10 +74,6 @@ public:
     void set_size(size_t N);
 
     [[nodiscard]] constexpr size_t hier() const;
-
-    struct hier_cmp {
-        constexpr bool operator()(const elem &a, const elem &b) const;
-    };
 };
 
 std::istream &operator>>(std::istream &is, elem &el);
@@ -140,5 +136,6 @@ typename elem::iters<UD>::iter elem::iters<UD>::begin() const {
 
 template <bool UD>
 typename elem::iters<UD>::iter elem::iters<UD>::end() const { return { _el, _el._n }; }
+
 
 #endif //LATTICE_ELEM_HPP
