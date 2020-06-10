@@ -3,19 +3,17 @@
 #include "util.hpp"
 
 std::istream &operator>>(std::istream &is, elem &el) {
-    el._n = 0;
     el._v.clear();
-    while (int c = is.get()) {
+    el._v.resize(SZ(el._n), 0ull);
+    for (size_t i{ 0 }; i < el._n; i++) {
+        auto c = is.get();
         if (c != '0' && c != '1') {
-            is.unget();
-            break;
+            i--;
+            continue;
         }
-        if (!(el._n++ % 64))
-            el._v.push_back(0);
-        auto & v = el._v.back();
-        v <<= 1;
-        if (c == '1')
-            v |= 1ull;
+        if (c == '1') {
+            el._v[i / 64ull] |= 1ull << (i % 64ull);
+        }
     }
     return is;
 }
@@ -23,9 +21,7 @@ std::istream &operator>>(std::istream &is, elem &el) {
 std::ostream &operator<<(std::ostream &os, const elem &el) {
     for (size_t i{ 0 }; i < el._n; i++) {
         auto v = el._v[i / 64ull];
-        if (i >= el._n / 64ull * 64ull)
-            v <<= 64ull - el._n % 64ull;
-        os << ((v & (1ull << (63ull - i % 64ull))) ? '1' : '0');
+        os << ((v & (1ull << (i % 64ull))) ? '1' : '0');
     }
     return os;
 }
@@ -107,6 +103,10 @@ bool elem::operator==(const elem &b) const {
 
 bool elem::operator!=(const elem &b) const {
     return !(*this == b);
+}
+
+void elem::set_size(size_t N) {
+    _n = N;
 }
 
 size_t elem::hasher::operator()(const elem &el) const {

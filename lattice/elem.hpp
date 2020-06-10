@@ -69,6 +69,8 @@ public:
     struct hasher {
         size_t operator()(const elem &el) const;
     };
+
+    void set_size(size_t N);
 };
 
 std::istream &operator>>(std::istream &is, elem &el);

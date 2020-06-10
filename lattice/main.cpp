@@ -35,6 +35,7 @@ int main() {
     show(bs);
     while (true) {
         elem e;
+        e.set_size(N);
         std::cin >> e;
         char ch;
         std::cin >> ch;
