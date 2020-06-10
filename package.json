@@ -15,13 +15,11 @@
   "author": "b1f6c1c4 b1f6c1c4@gmail.com",
   "license": "MIT",
   "dependencies": {
-    "@datastructures-js/priority-queue": "^4.1.1",
     "bottleneck": "^2.19.5",
     "chalk": "^4.1.0",
     "js-combinatorics": "^0.5.5",
     "json-stringify-safe": "^5.0.1",
     "json5": "^2.1.3",
-    "object-hash": "^2.0.3",
     "rimraf": "^3.0.2",
     "timespan-parser": "^1.0.2",
     "winston": "^3.2.1",

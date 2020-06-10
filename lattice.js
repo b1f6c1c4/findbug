@@ -1,160 +1,121 @@
-const { MaxPriorityQueue } = require('@datastructures-js/priority-queue');
+const cp = require('child_process');
+const path = require('path');
+const readline = require('readline');
+const logger = require('./logger')('lattice');
 
-class LatticeElem {
-  constructor(value) {
-    // this.v[0][0] is LSB
-    if (typeof value === 'bigint') {
-      this.N = value;
-      this.T = 0n;
-      this.v = new BigUint64Array((N + 63) / 64);
-    } else if (typeof value === 'number') {
-      this.N = BigInt(value);
-      this.T = 0n;
-      this.v = new BigUint64Array((N + 63) / 64);
-    } else if (typeof value === 'string') {
-      this.N = BigInt(str.length);
-      this.v = new BigUint64Array((str.length + 63) / 64);
-      let i;
-      for (i = 0n; i < l.N / 64n; i++) {
-        this.v[i] = BigInt('0b' + value.substr(Number(-64n * i), 64));
-      }
-      if (l.N % 64n) {
-        this.v[i] = BigInt('0b' + value.substr(Number(i)));
-      }
-      this.T = this.updateT();
-    } else if (value instanceof LatticeElem) {
-      this.N = value.N;
-      this.v = new BigUint64Array(value.v);
-    } else {
-      throw new Error('Type not supported');
-    }
-  }
-
-  updateT() {
-    this.T = this.v.reduce((a, b) => {
-      b -= ((b >> 1n) & 0x5555555555555555n);
-      b = (b & 0x3333333333333333n) + (b >> 2n & 0x3333333333333333n);
-      return a + ((b + (b >> 4n)) & 0xf0f0f0f0f0f0f0fn) * 0x101010101010101n >> 56n;
-    }, 0n);
-  }
-
-  clone() {
-    return new LatticeElem(this);
-  }
-
-  toString() {
-    const s = this.v.reduce((a, b) => {
-      const ss = b.toString(2);
-      return a + '0'.repeat(64 - ss.length) + ss;
-    }, '');
-    if (this.N % 64n)
-      return s.substr(Number(64n - this.N % 64n));
-    return s;
-  }
-
-  pick(p) {
-    const res = [];
-    for (let i = 0n; i < this.N; i++) {
-      if ((this.v[i / 64n] >>> (i % 64n)) & 1n) {
-        res.push(p[i]);
-      }
-    }
-    return res;
-  }
-
-  static top(N) {
-    let l = LatticeElem.top[N];
-    if (l) return l;
-    l = new LatticeElem(N);
-    l.v.fill(0xffffffffffffffffn);
-    if (l.N % 64n)
-      l.v[l.N / 64n] &= (1n << BigInt(l.N % 64n)) - 1n;
-    l.T = l.N;
-    return LatticeElem.top[N] = l;
-  }
-
-  static bottom(N) {
-    let l = LatticeElem.bottom[N];
-    if (l) return l;
-    l = new LatticeElem(N);
-    return LatticeElem.bottom[N] = l;
-  }
-
-  veeEq(b) {
-    this.v.forEach((v, i) => { this.v[i] |= b.v[i]; });
-    this.updateT();
-    return this;
-  }
-
-  wedgeEq(b) {
-    this.v.forEach((v, i) => { this.v[i] &= b.v[i]; });
-    this.updateT();
-    return this;
-  }
-
-  equals(b) {
-    return this.v.every((v, i) => this.v[i] == b.v[i]);
-  }
-
-  covers(b) {
-    return this.v.every((v, i) => (this.v[i] & b.v[i]) == b.v[i]);
-  }
-
-  covered(b) {
-    return this.v.every((v, i) => (this.v[i] & b.v[i]) == a.v[i]);
-  }
-
-  *ups() {
-    for (let i = 0n; i < this.N; i++) {
-      if (!((this.v[i / 64n] >>> (i % 64n)) & 1n)) {
-        const l = new Lattice(this);
-        l.v[i / 64n] |= 1n << (i % 64n);
-        yield return l;
-      }
-    }
-  }
-
-  *downs() {
-    for (let i = 0n; i < this.N; i++) {
-      if ((this.v[i / 64n] >>> (i % 64n)) & 1n) {
-        const l = new Lattice(this);
-        l.v[i / 64n] &= ~(1n << (i % 64n));
-        yield return l;
-      }
-    }
-  }
-}
-
-class LatticeBiSet {
+class Lattice {
   constructor(N) {
-    this.N = BigInt(N);
-    this.Ts = [];
-    this.Fs = [];
+    // TODO: don't use silly path
+    const pa = path.join(__dirname, 'lattice', 'cmake-build-debug', 'lattice');
+    logger.debug('Spawning lattice program at:', pa);
+    this.prog = cp.spawn(pa, [N], {
+      stdio: ['pipe', 'pipe', 'inherit'],
+      detached: false,
+      windowsHide: true,
+    });
+    this.prog.stdin.setEncoding('utf-8');
+    this.rl = readline.createInterface({
+      input: this.prog.stdout,
+    });
+    this.lines = [];
+    this.rl.on('line', (line) => {
+      this.lines.push(line);
+      if (this.check) this.check();
+    });
   }
 
-  Tq(el) {
-    return this.Ts.some(el.covers);
+  async rlWrite(s) {
+    logger.trace('Write to lattice:', s);
+    await this.prog.stdin.write(s + '\n');
   }
 
-  Fq(el) {
-    return this.Fs.some(el.covered);
+  rlRead() {
+    return new Promise((resolve) => {
+      this.check = () => {
+        if (this.lines.length) {
+          this.check = undefined;
+          const s = this.lines.splice(0, 1)[0];
+          logger.trace('Read from lattice:', s);
+          resolve(s);
+        }
+      };
+      this.check();
+    });
   }
 
-  addT(el) {
-    if (Tq(el)) return;
-    if (Fq(el)) throw new Error('Assumption violation');
-    this.Ts.push(el);
+  async rlReads() {
+    const res = [];
+    while (true) {
+      const s = await this.rlRead();
+      if (s)
+        res.push(s);
+      else
+        return res;
+    }
   }
 
-  addF(el) {
-    if (Fq(el)) return;
-    if (Tq(el)) throw new Error('Assumption violation');
-    this.Fs.push(el);
+  quit() {
+    this.prog.stdin.end();
   }
 
-  Fups() {
-    const b = [];
+  async next() {
+    await this.rlWrite('next');
+    const start = await this.rlRead();
+    if (!start) return null;
+    await this.rlWrite('cancelled');
+    const cancel = await this.rlReads();
+    return {
+      start,
+      cancel,
+    };
+  }
+
+  async report(elem, val) {
+    if (val === true) await this.rlWrite('true');
+    else if (val === false) await this.rlWrite('false');
+    else await this.rlWrite('improbable');
+    await this.rlWrite(elem); // .map((c) => c ? '1' : '0').join(''));
+    const s = +await this.rlRead();
+    return !!s;
+  }
+
+  async list(str, singular) {
+    this[str] = [];
+    await this.rlWrite(`list ${str}`);
+    while (true) {
+      const s = await this.rlRead();
+      if (!s) break;
+      this[str].push(s);
+      logger.debug(`${singular || str}:`, s);
+    }
+  }
+
+  async log() {
+    await this.rlWrite('summary');
+    this.summary = {};
+    let v;
+    v = this.summary.true = +await this.rlRead();
+    logger.info('Number of true:', v);
+    v = this.summary.suprema = +await this.rlRead();
+    logger.info('Number of suprema:', v);
+    v = this.summary.improbable = +await this.rlRead();
+    logger.info('Number of improbable:', v);
+    v = this.summary.infima = +await this.rlRead();
+    logger.info('Number of infima:', v);
+    v = this.summary.false = +await this.rlRead();
+    logger.info('Number of false:', v);
+    v = this.summary.running = +await this.rlRead();
+    logger.info('Number of running:', v);
+
+    await this.list('suprema', 'supremum');
+    await this.list('infima', 'infimum');
+
+    if (logger.getLevel() < 6) return;
+    await this.list('true');
+    await this.list('improbable');
+    await this.list('false');
+    await this.list('running');
   }
 }
 
-module.exports = LatticeElem;
+module.exports = Lattice;

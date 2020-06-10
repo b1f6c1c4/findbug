@@ -3,10 +3,9 @@ const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
 const rimraf = require('rimraf');
-const objhash = require('object-hash');
 const timespan = require('timespan-parser');
 const parameter = require('./parameter');
-const program = require('./program');
+const controller = require('./controller');
 const logger = require('./logger')('main');
 
 const argv = yargs
@@ -298,10 +297,13 @@ module.exports = async () => {
   }
 
   if (argv.invariant) {
-    await parameter.runInvariant(argv, pars, async (ps) => {
-      return program.execute(argv, ps, objhash(ps));
-    });
+    await controller.invariant(argv, pars);
+  } else if (argv.co) {
+    await controller.covariant(argv, pars);
+  } else if (argv.contra) {
+    await controller.contravariant(argv, pars);
   }
 
+  logger.debug('Exiting...');
   return 0;
 };

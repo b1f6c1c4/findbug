@@ -71,6 +71,8 @@ const logger = createLogger({
   transports: [tc],
 });
 
+let gLevel = lvls.levels.notice;
+
 module.exports = (lbl) => {
   const regularize = (k) => (msg, data, extra) => {
     let message = msg;
@@ -85,12 +87,15 @@ module.exports = (lbl) => {
       extra,
     });
   };
-  const customApi = {};
+  const customApi = { };
+  customApi.getLevel = () => gLevel;
   customApi.setLevel = (level) => {
     if (level === null) {
+      gLevel = -1;
       tc.level = 'fatal';
       tc.silent = true;
     } else {
+      gLevel = lvls.levels[level];
       tc.level = level;
       tc.silent = false;
     }
