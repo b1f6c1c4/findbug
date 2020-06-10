@@ -1,12 +1,9 @@
-#include "bi_set.hpp"
-#include <algorithm>
-#include <queue>
-#include <iostream>
+#include "tri_set.hpp"
 
-bi_set::const_info::const_info(const bi_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
+tri_set::const_info::const_info(const tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
 
 template<bool UD>
-bool bi_set::const_info::is() const {
+bool tri_set::const_info::is() const {
     if constexpr (UD) {
         return is_true();
     } else {
@@ -14,26 +11,18 @@ bool bi_set::const_info::is() const {
     }
 }
 
-bool bi_set::const_info::is_true() const {
+bool tri_set::const_info::is_true() const {
     return _el >= _bs._us;
 }
 
-bool bi_set::const_info::is_false() const {
+bool tri_set::const_info::is_false() const {
     return _el <= _bs._ds;
 }
 
-bool bi_set::const_info::is_decided() const {
-    return is_true() || is_false();
-}
-
-bool bi_set::const_info::is_undecided() const {
-    return !is_decided();
-}
-
-bi_set::info::info(bi_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
+tri_set::info::info(tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
 
 template<bool UD>
-bool bi_set::info::is() const {
+bool tri_set::info::is() const {
     if constexpr (UD) {
         return is_true();
     } else {
@@ -41,20 +30,40 @@ bool bi_set::info::is() const {
     }
 }
 
-bool bi_set::info::is_true() const {
+bool tri_set::info::is_true() const {
     return _el >= _bs._us;
 }
 
-bool bi_set::info::is_false() const {
+bool tri_set::info::is_false() const {
     return _el <= _bs._ds;
 }
 
-bool bi_set::info::is_decided() const {
-    return is_true() || is_false();
+const tri_set::const_info tri_set::operator[](const elem &el) const {
+    return { *this, el };
 }
 
-bool bi_set::info::is_undecided() const {
-    return !is_decided();
+tri_set::info tri_set::operator[](const elem &el) {
+    return { *this, el };
+}
+
+const homo_set<true> &tri_set::get_us() const {
+    return _us;
+}
+
+const homo_set<false> &tri_set::get_ds() const {
+    return _ds;
+}
+
+const typename tri_set::set_t &tri_set::get_zs() const {
+    return _zs;
+}
+
+const tri_set::set_t &tri_set::get_sup() const {
+    return _sup;
+}
+
+const tri_set::set_t &tri_set::get_inf() const {
+    return _inf;
 }
 
 template <bool UD>
@@ -93,7 +102,7 @@ void dfs(std::unordered_set<elem, elem::hasher> &lst, const homo_set<UD> &pre, c
     }
 }
 
-bi_set::info &bi_set::info::operator=(bool val) {
+tri_set::info &tri_set::info::operator=(bool val) {
     if (val) {
         if (is_false())
             throw std::exception{};
@@ -116,26 +125,11 @@ bi_set::info &bi_set::info::operator=(bool val) {
     return *this;
 }
 
-const bi_set::const_info bi_set::operator[](const elem &el) const {
-    return { *this, el };
+void tri_set::info::invalidate() {
+    if (is_true() || is_false())
+        throw std::exception{};
+    _bs._zs.insert(_el);
+    _bs.
 }
 
-bi_set::info bi_set::operator[](const elem &el) {
-    return { *this, el };
-}
-
-const homo_set<true> &bi_set::get_us() const {
-    return _us;
-}
-
-const homo_set<false> &bi_set::get_ds() const {
-    return _ds;
-}
-
-const std::unordered_set<elem, elem::hasher> &bi_set::get_ub() const {
-    return _ub;
-}
-
-const std::unordered_set<elem, elem::hasher> &bi_set::get_lb() const {
-    return _lb;
-}
+#include <algorithm>

@@ -18,7 +18,7 @@ public:
     friend std::istream &operator>>(std::istream &is, elem &el);
     friend std::ostream &operator<<(std::ostream &os, const elem &el);
 
-    [[nodiscard]] static elem top(size_t N);
+    [[nodiscard]] costatic elem top(size_t N);
     [[nodiscard]] static elem bottom(size_t N);
 
     elem &operator&=(const elem &b);
@@ -70,7 +70,14 @@ public:
         size_t operator()(const elem &el) const;
     };
 
+    [[nodiscard]] bool is_valid() const;
     void set_size(size_t N);
+
+    [[nodiscard]] constexpr size_t hier() const;
+
+    struct hier_cmp {
+        constexpr bool operator()(const elem &a, const elem &b) const;
+    };
 };
 
 std::istream &operator>>(std::istream &is, elem &el);

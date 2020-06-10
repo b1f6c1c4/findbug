@@ -1,4 +1,5 @@
 #include "elem.hpp"
+#include <bit>
 #include "homo_set.hpp"
 #include "util.hpp"
 
@@ -109,9 +110,24 @@ void elem::set_size(size_t N) {
     _n = N;
 }
 
+constexpr size_t elem::hier() const {
+    size_t h{ 0 };
+    for (const auto &v : _v)
+        h += std::popcount(v);
+    return h;
+}
+
+bool elem::is_valid() const {
+    return _n;
+}
+
 size_t elem::hasher::operator()(const elem &el) const {
     size_t h{ 0 };
     for (auto v : el._v)
         h = (h >> 59ull) | v | (h << 5ull);
     return h;
+}
+
+constexpr bool elem::hier_cmp::operator()(const elem &a, const elem &b) const {
+    return a.hier() < b.hier();
 }

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "bi_set.hpp"
+#include "tri_set.hpp"
 
 void show(const bi_set &bs) {
     std::cout << "Known T:";
