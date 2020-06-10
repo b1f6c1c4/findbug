@@ -108,7 +108,7 @@ bool elem::iters<UD>::iter::operator!=(const elem::iters<UD>::iter &o) const {
 template <bool UD>
 typename elem::iters<UD>::iter &elem::iters<UD>::iter::operator++() {
     while (++_i < _el._n)
-        if (!(_el._v[_i / 64ull] & (1ull << (_i % 64ull))) ^ UD)
+        if (((_el._v[_i / 64ull] & (1ull << (_i % 64ull))) != 0) ^ UD)
             break;
     return *this;
 }
@@ -126,7 +126,7 @@ elem::iters<UD>::iters(const elem &el) : _el{ el } { }
 template <bool UD>
 typename elem::iters<UD>::iter elem::iters<UD>::begin() const {
     auto it = iter{ _el, 0 };
-    return ((_el._v.front() & 1ull) ^ UD) ? ++it : it;
+    return (!(_el._v.front() & 1ull) ^ UD) ? ++it : it;
 }
 
 template <bool UD>

@@ -21,12 +21,11 @@ std::istream &operator>>(std::istream &is, elem &el) {
 }
 
 std::ostream &operator<<(std::ostream &os, const elem &el) {
-    size_t j{ 0 };
-    for (auto v : el._v) {
-        for (size_t i{ 0 }; i < 64 && j < el._n; i++, j++) {
-            v >>= 1;
-            os << (v & 1ull);
-        }
+    for (size_t i{ 0 }; i < el._n; i++) {
+        auto v = el._v[i / 64ull];
+        if (i >= el._n / 64ull * 64ull)
+            v <<= 64ull - el._n % 64ull;
+        os << ((v & (1ull << (63ull - i % 64ull))) ? '1' : '0');
     }
     return os;
 }

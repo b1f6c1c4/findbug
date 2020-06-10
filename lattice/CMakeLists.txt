@@ -3,4 +3,4 @@ project(lattice)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(lattice main.cpp elem.cpp elem.hpp util.hpp homo_set.hpp bi_set.hpp bi_set.cpp homo_set.cpp)
+add_executable(lattice main.cpp util.hpp elem.hpp elem.cpp homo_set.hpp homo_set.cpp bi_set.hpp bi_set.cpp)

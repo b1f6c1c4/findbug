@@ -1,6 +1,7 @@
 #include "bi_set.hpp"
 #include <algorithm>
 #include <queue>
+#include <iostream>
 
 bi_set::const_info::const_info(const bi_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
 
@@ -108,7 +109,7 @@ bi_set::info &bi_set::info::operator=(bool val) {
         if (!is_false()) {
             remove<false>(_bs._lb, _el);
             remove<false>(_bs._ub, _el);
-            dfs(_bs._ub, _bs._ds, _el);
+            dfs(_bs._lb, _bs._ds, _el);
             _bs._ds += _el;
         }
     }

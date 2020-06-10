@@ -21,6 +21,8 @@ void show(const bi_set &bs) {
     for (const auto &e : bs.get_ds())
         std::cout << " " << e;
     std::cout << std::endl;
+
+    std::cout << std::endl;
 }
 
 int main() {
@@ -31,5 +33,18 @@ int main() {
     show(bs);
     bs[elem::bottom(N)] = false;
     show(bs);
+    while (true) {
+        elem e;
+        std::cin >> e;
+        char ch;
+        std::cin >> ch;
+        if (ch == 't') {
+            bs[e] = true;
+            show(bs);
+        } else if (ch == 'f') {
+            bs[e] = false;
+            show(bs);
+        }
+    }
     return 0;
 }
