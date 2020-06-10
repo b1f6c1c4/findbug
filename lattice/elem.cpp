@@ -99,14 +99,15 @@ elem::iters<false> elem::downs() const {
     return { *this };
 }
 
-template<bool UD>
-bool elem::operator<=(const homo_set<UD> &s) const {
-    return s >= *this;
+bool elem::operator==(const elem &b) const {
+    for (const auto &[l, r]: zip(_v, b._v))
+        if (l != l)
+            return false;
+    return true;
 }
 
-template<bool UD>
-bool elem::operator>=(const homo_set<UD> &s) const {
-    return s <= *this;
+bool elem::operator!=(const elem &b) const {
+    return !(*this == b);
 }
 
 size_t elem::hasher::operator()(const elem &el) const {

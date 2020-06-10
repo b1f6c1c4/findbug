@@ -30,6 +30,9 @@ public:
     [[nodiscard]] bool operator>=(const elem &b) const;
     [[nodiscard]] bool operator<=(const elem &b) const;
 
+    [[nodiscard]] bool operator==(const elem &b) const;
+    [[nodiscard]] bool operator!=(const elem &b) const;
+
     template <bool UD>
     class iters {
         const elem &_el;
@@ -70,6 +73,16 @@ public:
 
 std::istream &operator>>(std::istream &is, elem &el);
 std::ostream &operator<<(std::ostream &os, const elem &el);
+
+template<bool UD>
+bool elem::operator<=(const homo_set<UD> &s) const {
+    return s >= *this;
+}
+
+template<bool UD>
+bool elem::operator>=(const homo_set<UD> &s) const {
+    return s <= *this;
+}
 
 template <bool UD>
 elem::iters<UD>::iter::iter(const elem &el, size_t i) : _el{ el }, _i{ i } { }

@@ -56,9 +56,9 @@ bool bi_set::info::is_undecided() const {
     return !is_decided();
 }
 
-template <bool UD, typename Container>
-void remove(Container &lst, const elem &el) {
-    std::remove_if(lst.begin(), lst.end(), [&el](const elem &e){
+template <bool UD>
+void remove(std::unordered_set<elem, elem::hasher> &lst, const elem &el) {
+    std::erase_if(lst, [&el](const elem &e){
         if constexpr (UD) {
             return e >= el;
         } else {
@@ -67,8 +67,8 @@ void remove(Container &lst, const elem &el) {
     });
 }
 
-template <bool UD, typename Container>
-void dfs(Container &lst, const homo_set<UD> &pre, const elem &el0) {
+template <bool UD>
+void dfs(std::unordered_set<elem, elem::hasher> &lst, const homo_set<UD> &pre, const elem &el0) {
     std::queue<elem> searching;
     searching.push(el0);
     while (!searching.empty()) {
