@@ -9,20 +9,13 @@
 
 class tri_set {
 public:
-    typedef std::shared_ptr<elem> pelem;
-    struct welem_hier_cmp {
-        bool operator()(pelem l, pelem r) const {
-            return l->hier() > r->hier();
-        }
-    };
-    struct phasher {
-        size_t operator()(const pelem &el) const {
-            return elem::hasher{}(*el);
+    struct elem_hier_cmp {
+        bool operator()(const elem &l, const elem &r) const {
+            return l.hier() < r.hier();
         }
     };
     typedef std::unordered_set<elem, elem::hasher> set_t;
-    typedef std::priority_queue<pelem, std::vector<pelem>, welem_hier_cmp> queue_t;
-    typedef std::unordered_set<pelem, phasher> pset_t;
+    typedef std::priority_queue<elem, std::vector<elem>, elem_hier_cmp> queue_t;
 
 private:
     // List of supporting elements confirmed TRUE
@@ -35,7 +28,6 @@ private:
     // List of elements adjacent to TRUE and/or FALSE range
     // ... but may also contain invalid (already truthy/falsy) items
     queue_t _q;
-    pset_t _qe;
 
     // List of suprema FALSE elements
     set_t _sup;
@@ -44,7 +36,6 @@ private:
 
     void check_sup(const elem &el);
     void check_inf(const elem &el);
-    void enqueue(const elem &el);
     void mark_true(const elem &el);
     void mark_false(const elem &el);
     void mark_improbable(const elem &el);
@@ -76,14 +67,14 @@ public:
         void invalidate();
     };
 
-    const const_info operator[](const elem &el) const;
-    info operator[](const elem &el);
+    [[nodiscard]] const const_info operator[](const elem &el) const;
+    [[nodiscard]] info operator[](const elem &el);
 
-    const homo_set<true> &get_us() const;
-    const homo_set<false> &get_ds() const;
-    const set_t &get_zs() const;
-    const set_t &get_sup() const;
-    const set_t &get_inf() const;
+    [[nodiscard]] const homo_set<true> &get_us() const;
+    [[nodiscard]] const homo_set<false> &get_ds() const;
+    [[nodiscard]] const set_t &get_zs() const;
+    [[nodiscard]] const set_t &get_sup() const;
+    [[nodiscard]] const set_t &get_inf() const;
 
     const elem next();
 };

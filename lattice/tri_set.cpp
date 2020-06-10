@@ -1,5 +1,5 @@
 #include "tri_set.hpp"
-#include <algorithm>
+// #include <algorithm>
 
 tri_set::const_info::const_info(const tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
 
@@ -70,7 +70,7 @@ const tri_set::set_t &tri_set::get_inf() const {
 void tri_set::check_sup(const elem &el) {
     // Note: el should be FALSE before proceed
     for (const auto &e : el.ups())
-        if (e <= _ds)
+        if (!(e >= _us || _zs.contains(e)))
             return;
     _sup.insert(el);
 }
@@ -78,23 +78,14 @@ void tri_set::check_sup(const elem &el) {
 void tri_set::check_inf(const elem &el) {
     // Note: el should be TRUE before proceed
     for (const auto &e : el.downs())
-        if (e >= _us)
+        if (!(e <= _ds || _zs.contains(e)))
             return;
     _inf.insert(el);
-}
-
-void tri_set::enqueue(const elem &el) {
-    auto it = _qe.find(std::make_shared<elem>(el));
-    if (it != _qe.end())
 }
 
 void tri_set::mark_true(const elem &el) {
     if (el <= _ds)
         throw std::exception{};
-
-    std::erase_if(_qe, [&el](const pelem &pe) {
-        return *pe >= el;
-    });
 
     std::queue<elem> searching;
     searching.push(el);
@@ -103,23 +94,19 @@ void tri_set::mark_true(const elem &el) {
         searching.pop();
         for (const auto &e : ex.downs())
             if (!(e >= el))
-                enqueue(e);
-        for (const auto &e : el.ups())
+                _q.push(e);
+        for (const auto &e : ex.ups())
             if (!(e >= _us))
                 searching.push(e);
     }
 
     _us += el;
-    check_sup(el);
+    check_inf(el);
 }
 
 void tri_set::mark_false(const elem &el) {
     if (el >= _us)
         throw std::exception{};
-
-    std::erase_if(_qe, [&el](const pelem &pe) {
-        return *pe <= el;
-    });
 
     std::queue<elem> searching;
     searching.push(el);
@@ -128,46 +115,38 @@ void tri_set::mark_false(const elem &el) {
         searching.pop();
         for (const auto &e : ex.ups())
             if (!(e <= el))
-                enqueue(e);
-        for (const auto &e : el.downs())
+                _q.push(e);
+        for (const auto &e : ex.downs())
             if (!(e <= _ds))
                 searching.push(e);
     }
 
-    _us += el;
-    check_inf(el);
+    _ds += el;
+    check_sup(el);
 }
 
 void tri_set::mark_improbable(const elem &el) {
-    if (is_true() || is_false())
+    if (el >= _us || el <= _ds)
         throw std::exception{};
-    _bs._zs.insert(_el);
-    _bs.
+
+    _zs.insert(el);
+    for (const auto &e : el.ups())
+        if (e >= _us)
+            check_inf(e);
+    for (const auto &e : el.downs())
+        if (e <= _ds)
+            check_sup(e);
 }
 
-template <bool UD>
-void dfs(typename tri_set::set_t &lst, const homo_set<UD> &pre, const elem &el0) {
-    std::queue<elem> searching;
-    searching.push(el0);
-    while (!searching.empty()) {
-        auto el = searching.front();
-        searching.pop();
-        if (UD) {
-            for (const auto &e : el.downs())
-                if (!(e >= el0))
-                    lst.insert(e);
-            for (const auto &e : el.ups())
-                if (!(e >= pre))
-                    searching.push(e);
-        } else {
-            for (const auto &e : el.ups())
-                if (!(e <= el0))
-                    lst.insert(e);
-            for (const auto &e : el.downs())
-                if (!(e <= pre))
-                    searching.push(e);
-        }
+const elem tri_set::next() {
+    while (!_q.empty()) {
+        auto el = _q.top();
+        _q.pop();
+        if (el >= _us || el <= _ds || _zs.contains(el))
+            continue;
+        return el;
     }
+    return {};
 }
 
 tri_set::info &tri_set::info::operator=(bool val) {

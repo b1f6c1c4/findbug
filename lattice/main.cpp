@@ -1,19 +1,24 @@
 #include <iostream>
 #include "tri_set.hpp"
 
-void show(const bi_set &bs) {
+void show(const tri_set &bs) {
     std::cout << "Known T:";
     for (const auto &e : bs.get_us())
         std::cout << " " << e;
     std::cout << std::endl;
 
-    std::cout << "Upper Boundries:";
-    for (const auto &e : bs.get_ub())
+    std::cout << "Known sup:";
+    for (const auto &e : bs.get_sup())
         std::cout << " " << e;
     std::cout << std::endl;
 
-    std::cout << "Lower Boundries:";
-    for (const auto &e : bs.get_lb())
+    std::cout << "Known Improbable:";
+    for (const auto &e : bs.get_zs())
+        std::cout << " " << e;
+    std::cout << std::endl;
+
+    std::cout << "Known inf:";
+    for (const auto &e : bs.get_inf())
         std::cout << " " << e;
     std::cout << std::endl;
 
@@ -27,25 +32,27 @@ void show(const bi_set &bs) {
 
 int main() {
     constexpr size_t N = 4;
-    bi_set bs;
+    tri_set bs;
     show(bs);
-    bs[elem::top(N)] = true;
-    show(bs);
+    // bs[elem::top(N)] = true;
+    // show(bs);
     bs[elem::bottom(N)] = false;
     show(bs);
     while (true) {
-        elem e;
-        e.set_size(N);
-        std::cin >> e;
+        auto e = bs.next();
+        if (!e)
+            break;
+        std::cout << e << "=? ";
         char ch;
         std::cin >> ch;
         if (ch == 't') {
             bs[e] = true;
-            show(bs);
         } else if (ch == 'f') {
             bs[e] = false;
-            show(bs);
+        } else {
+            bs[e].invalidate();
         }
+        show(bs);
     }
     return 0;
 }

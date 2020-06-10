@@ -111,15 +111,11 @@ void elem::set_size(size_t N) {
     _n = N;
 }
 
-constexpr size_t elem::hier() const {
+size_t elem::hier() const {
     size_t h{ 0 };
     for (const auto &v : _v)
         h += std::popcount(v);
     return h;
-}
-
-bool elem::is_valid() const {
-    return _n;
 }
 
 size_t elem::hasher::operator()(const elem &el) const {
