@@ -50,6 +50,7 @@ bool tri_set::mark_true(const elem &el) {
     if (el <= _ds)
         return false;
 
+    set_t searched;
     std::queue<elem> searching;
     searching.push(el);
     while (!searching.empty()) {
@@ -59,8 +60,10 @@ bool tri_set::mark_true(const elem &el) {
             if (!(e >= el))
                 _q.emplace(e, true);
         for (const auto &e : ex.ups())
-            if (!(e >= _us))
-                searching.push(e);
+            if (!(e >= _us) && !searched.contains(e)) {
+            searched.insert(e);
+            searching.push(e);
+        }
     }
 
     _us += el;
@@ -76,6 +79,7 @@ bool tri_set::mark_false(const elem &el) {
     if (el >= _us)
         return false;
 
+    set_t searched;
     std::queue<elem> searching;
     searching.push(el);
     while (!searching.empty()) {
@@ -85,8 +89,10 @@ bool tri_set::mark_false(const elem &el) {
             if (!(e <= el))
                 _q.emplace(e, false);
         for (const auto &e : ex.downs())
-            if (!(e <= _ds))
+            if (!(e <= _ds) && !searched.contains(e)) {
+                searched.insert(e);
                 searching.push(e);
+            }
     }
 
     _ds += el;
