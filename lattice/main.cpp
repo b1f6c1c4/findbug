@@ -34,8 +34,8 @@ int main() {
     constexpr size_t N = 4;
     tri_set bs;
     show(bs);
-    // bs[elem::top(N)] = true;
-    // show(bs);
+    bs[elem::top(N)] = true;
+    show(bs);
     bs[elem::bottom(N)] = false;
     show(bs);
     while (true) {

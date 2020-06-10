@@ -8,14 +8,19 @@
 #include "homo_set.hpp"
 
 class tri_set {
-public:
-    struct elem_hier_cmp {
-        bool operator()(const elem &l, const elem &r) const {
-            return l.hier() < r.hier();
-        }
+    class aelem : public elem {
+        bool _ud;
+    public:
+        aelem(const elem &el, bool ud);
+        [[nodiscard]] size_t prog() const;
     };
+    struct aelem_hier_cmp {
+        bool operator()(const aelem &l, const aelem &r) const;
+    };
+    typedef std::priority_queue<aelem, std::vector<aelem>, aelem_hier_cmp> queue_t;
+
+public:
     typedef std::unordered_set<elem, elem::hasher> set_t;
-    typedef std::priority_queue<elem, std::vector<elem>, elem_hier_cmp> queue_t;
 
 private:
     // List of supporting elements confirmed TRUE
@@ -48,9 +53,9 @@ public:
     public:
         friend class tri_set;
         template <bool UD>
-        bool is() const;
-        bool is_true() const;
-        bool is_false() const;
+        [[nodiscard]] bool is() const;
+        [[nodiscard]] bool is_true() const;
+        [[nodiscard]] bool is_false() const;
     };
 
     class info {
@@ -60,14 +65,14 @@ public:
     public:
         friend class tri_set;
         template <bool UD>
-        bool is() const;
-        bool is_true() const;
-        bool is_false() const;
+        [[nodiscard]] bool is() const;
+        [[nodiscard]] bool is_true() const;
+        [[nodiscard]] bool is_false() const;
         info &operator=(bool val);
         void invalidate();
     };
 
-    [[nodiscard]] const const_info operator[](const elem &el) const;
+    [[nodiscard]] const_info operator[](const elem &el) const;
     [[nodiscard]] info operator[](const elem &el);
 
     [[nodiscard]] const homo_set<true> &get_us() const;
@@ -76,7 +81,7 @@ public:
     [[nodiscard]] const set_t &get_sup() const;
     [[nodiscard]] const set_t &get_inf() const;
 
-    const elem next();
+    elem next();
 };
 
 #endif //LATTICE_TRI_SET_HPP

@@ -1,5 +1,14 @@
 #include "tri_set.hpp"
-// #include <algorithm>
+
+size_t tri_set::aelem::prog() const {
+    return _ud ? hier() : _n - hier();
+}
+
+tri_set::aelem::aelem(const elem &el, bool ud) : elem{ el }, _ud{ ud } { }
+
+bool tri_set::aelem_hier_cmp::operator()(const aelem &l, const aelem &r) const {
+    return l.prog() > r.prog();
+}
 
 tri_set::const_info::const_info(const tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
 
@@ -39,7 +48,7 @@ bool tri_set::info::is_false() const {
     return _el <= _bs._ds;
 }
 
-const tri_set::const_info tri_set::operator[](const elem &el) const {
+tri_set::const_info tri_set::operator[](const elem &el) const {
     return { *this, el };
 }
 
@@ -94,7 +103,7 @@ void tri_set::mark_true(const elem &el) {
         searching.pop();
         for (const auto &e : ex.downs())
             if (!(e >= el))
-                _q.push(e);
+                _q.emplace(e, true);
         for (const auto &e : ex.ups())
             if (!(e >= _us))
                 searching.push(e);
@@ -102,6 +111,9 @@ void tri_set::mark_true(const elem &el) {
 
     _us += el;
     check_inf(el);
+    for (const auto &e : el.downs())
+        if (e <= _ds)
+            check_sup(e);
 }
 
 void tri_set::mark_false(const elem &el) {
@@ -115,7 +127,7 @@ void tri_set::mark_false(const elem &el) {
         searching.pop();
         for (const auto &e : ex.ups())
             if (!(e <= el))
-                _q.push(e);
+                _q.emplace(e, false);
         for (const auto &e : ex.downs())
             if (!(e <= _ds))
                 searching.push(e);
@@ -123,6 +135,9 @@ void tri_set::mark_false(const elem &el) {
 
     _ds += el;
     check_sup(el);
+    for (const auto &e : el.ups())
+        if (e >= _us)
+            check_inf(e);
 }
 
 void tri_set::mark_improbable(const elem &el) {
@@ -138,9 +153,9 @@ void tri_set::mark_improbable(const elem &el) {
             check_sup(e);
 }
 
-const elem tri_set::next() {
+elem tri_set::next() {
     while (!_q.empty()) {
-        auto el = _q.top();
+        elem el{ _q.top() };
         _q.pop();
         if (el >= _us || el <= _ds || _zs.contains(el))
             continue;

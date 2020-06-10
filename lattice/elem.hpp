@@ -11,6 +11,7 @@ template <bool UD>
 class homo_set;
 
 class elem {
+protected:
     size_t _n;
     std::vector<uint64_t> _v;
 
