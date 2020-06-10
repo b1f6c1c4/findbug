@@ -25,25 +25,36 @@ const lvls = {
 
 addColors(lvls);
 
+const fmt = (color) => (info) => {
+  let msg = color
+    ? chalk`{gray ${info.timestamp}} [${info.label}] ${info.level}: ${info.message}`
+    : `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`;
+  if (info.data === undefined) {
+    return msg;
+  }
+  info.data.forEach((d, i) => {
+    if (d instanceof Error) {
+      msg = `${msg} ${d.stack}`;
+    } else {
+      const data = stringify(d, null, 2);
+      if (data.includes('\n')) {
+        msg = `${msg}\n${data}`;
+      } else if (i) {
+        msg = `${msg} / ${data}`;
+      } else {
+        msg = `${msg} ${data}`;
+      }
+    }
+  });
+  return msg;
+};
+
 const tc = new transports.Console({
   level: 'notice',
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss' }),
     format.colorize({ all: true }),
-    format.printf((info) => {
-      const msg = chalk`{gray ${info.timestamp}} [${info.label}] ${info.level}: ${info.message}`;
-      if (info.data === undefined) {
-        return msg;
-      }
-      if (info.data instanceof Error) {
-        return `${msg} ${info.data.stack}`;
-      }
-      const data = stringify(info.data, null, 2);
-      if (data.includes('\n')) {
-        return `${msg}\n${data}`;
-      }
-      return `${msg} ${data}`;
-    }),
+    format.printf(fmt(true)),
   ),
 });
 
@@ -53,20 +64,7 @@ const logger = createLogger({
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.sssZZ' }),
     format.errors({ stack: true }),
-    format.printf((info) => {
-      const msg = `${info.timestamp} [${info.label}] ${info.level}: ${info.message}`;
-      if (info.data === undefined) {
-        return msg;
-      }
-      if (info.data instanceof Error) {
-        return `${msg} ${info.data.stack}`;
-      }
-      const data = stringify(info.data, null, 2);
-      if (data.includes('\n')) {
-        return `${msg}\n${data}`;
-      }
-      return `${msg} ${data}`;
-    }),
+    format.printf(fmt(false)),
   ),
   transports: [tc],
 });
@@ -74,7 +72,7 @@ const logger = createLogger({
 let gLevel = lvls.levels.notice;
 
 module.exports = (lbl) => {
-  const regularize = (k) => (msg, data, extra) => {
+  const regularize = (k) => (msg, ...data) => {
     let message = msg;
     if (message === undefined) {
       message = 'undefined';
@@ -84,7 +82,6 @@ module.exports = (lbl) => {
       label: lbl || 'default',
       message,
       data,
-      extra,
     });
   };
   const customApi = { };

@@ -42,7 +42,7 @@ module.exports.parse = async ({ argFile, argsAsPars, args }) => {
       });
     });
   }
-  logger.notice('Got # of parameters:', res.length);
+  logger.notice('Number of parameters:', res.length);
   logger.trace('Parameters:', res);
   return res;
 };

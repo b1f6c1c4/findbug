@@ -246,7 +246,7 @@ if (argv.verbosity >= 3) {
 if (argv.prune) {
   logger.warning('Pruning the output directory:', argv.o);
   rimraf.sync(argv.o, { disableGlob: true });
-  logger.notice('Done pruning the output directory');
+  logger.info('Pruned the output directory');
 }
 
 if (argv.logFile) {

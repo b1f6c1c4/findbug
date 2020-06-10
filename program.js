@@ -201,7 +201,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   });
   const dur = new Date() - t;
 
-  logger.notice(`Result was >>${res}<< for execution #`, hash);
+  logger.notice('Result for execution:', res, hash);
   if (res !== 'cancel') {
     logger.info('Time consumption:', timespan.getString(dur, 'ms'));
   }

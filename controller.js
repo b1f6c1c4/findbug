@@ -57,18 +57,18 @@ module.exports.runInvariant = async (argv, p, runner) => {
 */
 
 const makeLattice = async (argv, N) => {
-  logger.info('Creating lattice');
+  logger.debug('Creating lattice');
   const lattice = new Lattice(N);
   if (argv.min) {
-    logger.info('Register the top of the lattice as true');
+    logger.debug('Register the top of the lattice as true');
     await lattice.report('1'.repeat(N), true);
   }
   if (argv.max) {
     if (!argv.one) {
-      logger.info('Register the bottom of the lattice as false');
+      logger.debug('Register the bottom of the lattice as false');
       await lattice.report('0'.repeat(N), false);
     } else {
-      logger.info('Register the bottom of the lattice (at least one parameter) as false');
+      logger.debug('Register the bottom of the lattice (at least one parameter) as false');
       for (let i = 0; i < N; i++)
         await lattice.report('0'.repeat(i) + '1' + '0'.repeat(N - i - 1), false);
     }
@@ -81,7 +81,7 @@ const run = async (argv, lattice, runner) => {
   const queue = [];
   await lattice.log();
   do {
-    logger.info(`Asking for the next moves, ${Object.keys(running).length} out of ${argv.maxProcs} used`);
+    logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
     while (Object.keys(running).length < argv.maxProcs) {
       logger.debug('Checking reports');
       while (queue.length) {
@@ -91,7 +91,7 @@ const run = async (argv, lattice, runner) => {
           logger.error('Assumption violation found, ignoring the result of #', cfg);
           logger.notice('Execution result of that was:', result);
         } else {
-          logger.info('Report accepted by lattice regarding #', cfg);
+          logger.debug('Report accepted by lattice regarding #', cfg);
         }
       }
       logger.debug('Calling lattice.next()');
@@ -119,7 +119,7 @@ const run = async (argv, lattice, runner) => {
     await lattice.log();
     if (!argv.exhaust) {
       if (lattice.summary.suprema || lattice.summary.infima) {
-        logger.notice('Supremum / Infimum found, stop running');
+        logger.info('Supremum / Infimum found, stop running');
         break;
       }
     }
@@ -155,7 +155,7 @@ const flow = (reverse) => async (argv, pars) => {
         break;
       case 'success':
       case 'fail':
-        const r = result === 'success' ^ reverse;
+        const r = !!((result === 'success') ^ reverse);
         logger.debug(`Will report ${r} for #`, cfg);
         queue.push({ cfg, result: r });
         break;

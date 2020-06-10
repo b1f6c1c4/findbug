@@ -92,20 +92,26 @@ class Lattice {
 
   async log() {
     await this.rlWrite('summary');
-    this.summary = {};
-    let v;
-    v = this.summary.true = +await this.rlRead();
-    logger.info('Number of true:', v);
-    v = this.summary.suprema = +await this.rlRead();
-    logger.info('Number of suprema:', v);
-    v = this.summary.improbable = +await this.rlRead();
-    logger.info('Number of improbable:', v);
-    v = this.summary.infima = +await this.rlRead();
-    logger.info('Number of infima:', v);
-    v = this.summary.false = +await this.rlRead();
-    logger.info('Number of false:', v);
-    v = this.summary.running = +await this.rlRead();
-    logger.info('Number of running:', v);
+    this.summary = {
+      true: +await this.rlRead(),
+      suprema: +await this.rlRead(),
+      improbable: +await this.rlRead(),
+      infima: +await this.rlRead(),
+      false: +await this.rlRead(),
+      running: +await this.rlRead(),
+    };
+    logger.notice(
+      'Number of T / U / F:',
+      this.summary.true,
+      this.summary.improbable,
+      this.summary.false,
+    );
+    logger.notice(
+      'Number of sup / inf:',
+      this.summary.suprema,
+      this.summary.infima,
+    );
+    logger.notice('Number of running executions:', this.summary.running);
 
     await this.list('suprema', 'supremum');
     await this.list('infima', 'infimum');
