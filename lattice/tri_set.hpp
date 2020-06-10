@@ -41,39 +41,11 @@ private:
 
     void check_sup(const elem &el);
     void check_inf(const elem &el);
+
+public:
     void mark_true(const elem &el);
     void mark_false(const elem &el);
     void mark_improbable(const elem &el);
-
-public:
-    class const_info {
-        const tri_set &_bs;
-        const elem &_el;
-        const_info(const tri_set &bs, const elem &el);
-    public:
-        friend class tri_set;
-        template <bool UD>
-        [[nodiscard]] bool is() const;
-        [[nodiscard]] bool is_true() const;
-        [[nodiscard]] bool is_false() const;
-    };
-
-    class info {
-        tri_set &_bs;
-        const elem &_el;
-        info(tri_set &bs, const elem &el);
-    public:
-        friend class tri_set;
-        template <bool UD>
-        [[nodiscard]] bool is() const;
-        [[nodiscard]] bool is_true() const;
-        [[nodiscard]] bool is_false() const;
-        info &operator=(bool val);
-        void invalidate();
-    };
-
-    [[nodiscard]] const_info operator[](const elem &el) const;
-    [[nodiscard]] info operator[](const elem &el);
 
     [[nodiscard]] const homo_set<true> &get_us() const;
     [[nodiscard]] const homo_set<false> &get_ds() const;

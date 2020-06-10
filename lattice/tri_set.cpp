@@ -10,52 +10,6 @@ bool tri_set::aelem_hier_cmp::operator()(const aelem &l, const aelem &r) const {
     return l.prog() > r.prog();
 }
 
-tri_set::const_info::const_info(const tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
-
-template<bool UD>
-bool tri_set::const_info::is() const {
-    if constexpr (UD) {
-        return is_true();
-    } else {
-        return is_false();
-    }
-}
-
-bool tri_set::const_info::is_true() const {
-    return _el >= _bs._us;
-}
-
-bool tri_set::const_info::is_false() const {
-    return _el <= _bs._ds;
-}
-
-tri_set::info::info(tri_set &bs, const elem &el) : _bs{ bs }, _el{ el } { }
-
-template<bool UD>
-bool tri_set::info::is() const {
-    if constexpr (UD) {
-        return is_true();
-    } else {
-        return is_false();
-    }
-}
-
-bool tri_set::info::is_true() const {
-    return _el >= _bs._us;
-}
-
-bool tri_set::info::is_false() const {
-    return _el <= _bs._ds;
-}
-
-tri_set::const_info tri_set::operator[](const elem &el) const {
-    return { *this, el };
-}
-
-tri_set::info tri_set::operator[](const elem &el) {
-    return { *this, el };
-}
-
 const homo_set<true> &tri_set::get_us() const {
     return _us;
 }
@@ -162,17 +116,4 @@ elem tri_set::next() {
         return el;
     }
     return {};
-}
-
-tri_set::info &tri_set::info::operator=(bool val) {
-    if (val) {
-        _bs.mark_true(_el);
-    } else {
-        _bs.mark_false(_el);
-    }
-    return *this;
-}
-
-void tri_set::info::invalidate() {
-    _bs.mark_improbable(_el);
 }

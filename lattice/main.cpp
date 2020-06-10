@@ -34,9 +34,9 @@ int main() {
     constexpr size_t N = 4;
     tri_set bs;
     show(bs);
-    bs[elem::top(N)] = true;
+    bs.mark_true(elem::top(N));
     show(bs);
-    bs[elem::bottom(N)] = false;
+    bs.mark_false(elem::bottom(N));
     show(bs);
     while (true) {
         auto e = bs.next();
@@ -46,11 +46,11 @@ int main() {
         char ch;
         std::cin >> ch;
         if (ch == 't') {
-            bs[e] = true;
+            bs.mark_true(e);
         } else if (ch == 'f') {
-            bs[e] = false;
+            bs.mark_false(e);
         } else {
-            bs[e].invalidate();
+            bs.mark_improbable(e);
         }
         show(bs);
     }
