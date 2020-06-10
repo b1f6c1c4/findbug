@@ -46,9 +46,9 @@ void tri_set::check_inf(const elem &el) {
     _inf.insert(el);
 }
 
-void tri_set::mark_true(const elem &el) {
+bool tri_set::mark_true(const elem &el) {
     if (el <= _ds)
-        throw std::exception{};
+        return false;
 
     std::queue<elem> searching;
     searching.push(el);
@@ -68,11 +68,13 @@ void tri_set::mark_true(const elem &el) {
     for (const auto &e : el.downs())
         if (e <= _ds)
             check_sup(e);
+
+    return true;
 }
 
-void tri_set::mark_false(const elem &el) {
+bool tri_set::mark_false(const elem &el) {
     if (el >= _us)
-        throw std::exception{};
+        return false;
 
     std::queue<elem> searching;
     searching.push(el);
@@ -92,11 +94,13 @@ void tri_set::mark_false(const elem &el) {
     for (const auto &e : el.ups())
         if (e >= _us)
             check_inf(e);
+
+    return true;
 }
 
-void tri_set::mark_improbable(const elem &el) {
+bool tri_set::mark_improbable(const elem &el) {
     if (el >= _us || el <= _ds)
-        throw std::exception{};
+        return false;
 
     _zs.insert(el);
     for (const auto &e : el.ups())
@@ -105,6 +109,8 @@ void tri_set::mark_improbable(const elem &el) {
     for (const auto &e : el.downs())
         if (e <= _ds)
             check_sup(e);
+
+    return true;
 }
 
 elem tri_set::next() {
@@ -116,4 +122,8 @@ elem tri_set::next() {
         return el;
     }
     return {};
+}
+
+bool tri_set::is_decided(const elem &el) const {
+    return el >= _us || el <= _ds;
 }

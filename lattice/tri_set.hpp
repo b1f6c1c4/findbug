@@ -43,15 +43,17 @@ private:
     void check_inf(const elem &el);
 
 public:
-    void mark_true(const elem &el);
-    void mark_false(const elem &el);
-    void mark_improbable(const elem &el);
+    [[nodiscard]] bool mark_true(const elem &el);
+    [[nodiscard]] bool mark_false(const elem &el);
+    [[nodiscard]] bool mark_improbable(const elem &el);
 
     [[nodiscard]] const homo_set<true> &get_us() const;
     [[nodiscard]] const homo_set<false> &get_ds() const;
     [[nodiscard]] const set_t &get_zs() const;
     [[nodiscard]] const set_t &get_sup() const;
     [[nodiscard]] const set_t &get_inf() const;
+
+    [[nodiscard]] bool is_decided(const elem &el) const;
 
     elem next();
 };

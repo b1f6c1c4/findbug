@@ -16,6 +16,8 @@ public:
 
     bool operator<=(const elem &o) const;
     bool operator>=(const elem &o) const;
+
+    size_t size() const;
 };
 
 template<bool UD>
@@ -42,6 +44,11 @@ std::vector<elem>::const_iterator homo_set<UD>::begin() const {
 template<bool UD>
 std::vector<elem>::const_iterator homo_set<UD>::end() const {
     return _els.end();
+}
+
+template<bool UD>
+size_t homo_set<UD>::size() const {
+    return _els.size();
 }
 
 #endif //LATTICE_HOMO_SET_HPP
