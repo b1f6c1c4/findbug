@@ -22,11 +22,11 @@ module.exports.runInvariant = async (argv, p, runner) => {
   };
 
   const pros = [];
-  if (argv.max) {
+  if (argv.sup) {
     logger.info('Searching upwards');
     pros.push(invariantImpl(true));
   }
-  if (argv.min) {
+  if (argv.inf) {
     logger.info('Searching downwards');
     pros.push(invariantImpl(false));
   }
@@ -59,11 +59,11 @@ module.exports.runInvariant = async (argv, p, runner) => {
 const makeLattice = async (argv, N) => {
   logger.debug('Creating lattice');
   const lattice = new Lattice(N);
-  if (argv.min) {
+  if (argv.inf) {
     logger.debug('Register the top of the lattice as true');
     await lattice.report('1'.repeat(N), true);
   }
-  if (argv.max) {
+  if (argv.sup) {
     if (!argv.one) {
       logger.debug('Register the bottom of the lattice as false');
       await lattice.report('0'.repeat(N), false);
@@ -72,6 +72,9 @@ const makeLattice = async (argv, N) => {
       for (let i = 0; i < N; i++)
         await lattice.report('0'.repeat(i) + '1' + '0'.repeat(N - i - 1), false);
     }
+  } else if (!argv.one) {
+    logger.debug('Register the bottom of the lattice as improbable');
+    await lattice.report('0'.repeat(N), null);
   }
   return lattice;
 };
@@ -80,20 +83,32 @@ const run = async (argv, lattice, runner) => {
   const running = {};
   const queue = [];
   await lattice.log();
-  do {
-    logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
-    while (Object.keys(running).length < argv.maxProcs) {
+  const check = async () => {
+    if (queue.length)
       logger.debug('Checking reports');
-      while (queue.length) {
-        const { cfg, result } = queue.splice(0, 1)[0];
-        logger.info(`Reporting ${result} to #`, cfg);
-        if (!await lattice.report(cfg, result)) {
-          logger.error('Assumption violation found, ignoring the result of #', cfg);
-          logger.notice('Execution result of that was:', result);
-        } else {
-          logger.debug('Report accepted by lattice regarding #', cfg);
-        }
+    while (queue.length) {
+      const { cfg, result } = queue.splice(0, 1)[0];
+      logger.info(`Reporting ${result} to #`, cfg);
+      delete running[cfg];
+      if (!await lattice.report(cfg, result)) {
+        logger.error('Assumption violation found, ignoring the result of #', cfg);
+        logger.notice('Execution result of that was:', result);
+      } else {
+        logger.debug('Report accepted by lattice regarding #', cfg);
       }
+    }
+  };
+  do {
+    await check();
+    if (Object.keys(running).length < argv.maxProcs) {
+      logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
+    } else {
+      logger.debug('No more execution slots:', argv.maxProcs);
+      logger.debug('Waiting for an execution to finish');
+      await Promise.race(Object.values(running).map((r) => r.promise));
+    }
+    while (Object.keys(running).length < argv.maxProcs) {
+      await check();
       logger.debug('Calling lattice.next()');
       const n = await lattice.next();
       if (!n) {
@@ -126,14 +141,14 @@ const run = async (argv, lattice, runner) => {
   } while (Object.keys(running).length);
   logger.info('No more running executions, start post-processing');
 
-  if (argv.max) {
+  if (argv.sup) {
     if (lattice.summary.suprema) {
       logger.notice('Number of found suprema:', lattice.summary.suprema);
     } else {
       logger.warning('No supremum found');
     }
   }
-  if (argv.min) {
+  if (argv.inf) {
     if (lattice.summary.infima) {
       logger.notice('Number of found infima:', lattice.summary.infima);
     } else {
@@ -165,14 +180,14 @@ const flow = (reverse) => async (argv, pars) => {
         break;
     }
   });
-  if (argv.max) {
+  if (argv.sup) {
     lattice.suprema.forEach((c) => {
       logger.info('Found supremum:', c);
       logger.notice('Found supremum:', pick(c));
     });
   }
-  if (argv.min) {
-    lattice.suprema.forEach((c) => {
+  if (argv.inf) {
+    lattice.infima.forEach((c) => {
       logger.info('Found infimum:', c);
       logger.notice('Found infimum:', pick(c));
     });

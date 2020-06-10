@@ -106,39 +106,41 @@ const argv = yargs
     type: 'string',
     requiresArg: 1,
   })
-  .group(['max', 'min', 'exhaust', 'co', 'contra', 'invariant'], 'Searching Strategies and a priori Assumptions:')
-  .option('max', {
-    describe: 'Search upwards: get maximum subset(s)',
+  .group(['sup', 'inf', 'exhaust', 'co', 'contra', 'invariant'], 'Searching Strategies and a priori Assumptions:')
+  .option('sup', {
+    alias: 'max',
+    describe: 'Search upwards: get largest / supremum subset(s)',
     type: 'boolean',
   })
-  .option('min', {
-    describe: 'Search downwards: get minimum subset(s)',
+  .option('inf', {
+    alias: 'min',
+    describe: 'Search downwards: get smallest / infimum subset(s)',
     type: 'boolean',
   })
   .option('co', {
     describe: 'Adding parameter(s) to a successful execution will not fail. \
-With --max, findbug can find a minimum successful subset of parameters, from which \
-removing any item(s) will make the program fail / error. \
-With --min, findbug can find a maximum failing subset of parameters, to which \
+With --sup, findbug can find a supremum failing subset of parameters, to which \
 adding any item(s) will make the program success / error. \
+With --inf, findbug can find a infimum successful subset of parameters, from which \
+removing any item(s) will make the program fail / error. \
 ',
     type: 'boolean',
   })
   .option('contra', {
     describe: 'Adding parameter(s) to a failing execution will not suceed. \
-With --max, findbug can find a minimum failing subset of parameters, from which \
-removing any item(s) will make the program success / error. \
-With --min, findbug can find a maximum successful subset of parameters, to which \
+With --sup, findbug can find a supremum successful subset of parameters, to which \
 adding any item(s) will make the program fail / error. \
+With --inf, findbug can find a infimum failing subset of parameters, from which \
+removing any item(s) will make the program success / error. \
 ',
     type: 'boolean',
   })
   .option('invariant', {
     describe: 'Neither of the previous two assumptions holds. \
-With --max, findbug can find a subset of parameters s.t. \
-any other subset with less elements than it will exhibit the same success / failure pattern. \
-With --min, findbug can find a subset of parameters s.t. \
+With --sup, findbug can find a subset of parameters s.t. \
 any other subset with more elements than it will exhibit the same success / failure pattern. \
+With --inf, findbug can find a subset of parameters s.t. \
+any other subset with less elements than it will exhibit the same success / failure pattern. \
 ',
     type: 'boolean',
   })
@@ -199,8 +201,8 @@ any other subset with more elements than it will exhibit the same success / fail
   })
   .check((argv) => {
     let i = 0;
-    if (!(argv.max || argv.min))
-      throw new Error('Argument check failed: You must specify at least one of --max or --min');
+    if (!(argv.sup || argv.inf))
+      throw new Error('Argument check failed: You must specify at least one of --sup or --inf');
     if (argv.co) i++;
     if (argv.contra) i++;
     if (argv.invariant) i++;
