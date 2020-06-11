@@ -5,6 +5,7 @@ const JSON5 = require('json5');
 const rimraf = require('rimraf');
 const fs = require('fs');
 const timespan = require('timespan-parser');
+const mkdirp = require('mkdirp');
 const parameter = require('./parameter');
 const controller = require('./controller');
 const logger = require('./logger')('main');
@@ -189,7 +190,7 @@ This option cannot be used together with --sup nor --inf. \
   .option('w', {
     alias: 'output',
     default: '.findbug-work',
-    describe: 'A directory to store program outputs, also used as cache.',
+    describe: 'A directory to store program outputs, also used as cache. NOT affected by --dry-run. If not exist, will do mkdir -p',
     type: 'string',
   })
   .option('S', {
@@ -310,6 +311,10 @@ if (argv.prune) {
     logger.info('Pruned the output directory');
   }
 }
+
+logger.info('Creating the output directory:', argv.output);
+mkdirp.sync(argv.output);
+logger.debug('Created the output directory:', argv.output);
 
 if (argv.logFile) {
   const pl = path.join(argv.output, argv.logFile);

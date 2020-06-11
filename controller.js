@@ -2,6 +2,7 @@ const readline = require('readline');
 const fs = require('fs');
 const Bottleneck = require('bottleneck');
 const Combinatorics = require('js-combinatorics');
+const parameter = require('./parameter');
 const program = require('./program');
 const Lattice = require('./lattice');
 const logger = require('./logger')('controller');
@@ -77,8 +78,9 @@ const run = async (argv, lattice, runner) => {
           }
         });
       }
+      const hash = parameter.hash(argv, n.start);
       logger.info('Starting new execution:', n.start);
-      runner(n.start, running[n.start] = {}, queue);
+      runner(n.start, hash, running[n.start] = {}, queue);
     }
 
     await lattice.log();
@@ -117,10 +119,10 @@ const flow = (reverse) => async (argv, pars) => {
   const counter = {};
   const lcounter = [];
   const startTime = +new Date();
-  await run(argv, lattice, async (cfg, exec, queue) => {
+  await run(argv, lattice, async (cfg, hash, exec, queue) => {
     exec.token = {};
     const ps = pick(cfg);
-    exec.promise = program.execute(argv, ps, cfg, exec.token);
+    exec.promise = program.execute(argv, ps, hash, exec.token);
     const res = await exec.promise;
     if (!lcounter[ps.length]) {
       lcounter[ps.length] = {};
@@ -129,17 +131,17 @@ const flow = (reverse) => async (argv, pars) => {
     lcounter[ps.length][res] = (lcounter[ps.length][res] || 0) + 1;
     switch (res) {
       case 'cancel':
-        logger.debug('Dropping cancellation report of #', cfg);
+        logger.debug('Dropping cancellation report of #', hash);
         break;
       case 'success':
       case 'fail':
         const r = !!((res === 'success') ^ reverse);
-        logger.debug(`Will report ${r} for #`, cfg);
+        logger.debug(`Will report ${r} for #`, hash);
         queue.push({ cfg, result: r });
         break;
       case 'disaster':
       case 'error':
-        logger.debug('Will report improbable for #', cfg);
+        logger.debug('Will report improbable for #', hash);
         queue.push({ cfg, result: null });
         break;
     }
@@ -149,13 +151,19 @@ const flow = (reverse) => async (argv, pars) => {
   if (argv.sup) {
     lattice.suprema.forEach((c) => {
       logger.info('Found supremum:', c);
-      logger.notice('Found supremum:', pick(c));
+      logger.notice('Found supremum:', {
+        hash: parameter.hash(argv, c),
+        p: pick(c),
+      });
     });
   }
   if (argv.inf) {
     lattice.infima.forEach((c) => {
       logger.info('Found infimum:', c);
-      logger.notice('Found infimum:', pick(c));
+      logger.notice('Found infimum:', {
+        hash: parameter.hash(argv, c),
+        p: pick(c),
+      });
     });
   }
 
@@ -206,7 +214,7 @@ module.exports.invariant = async (argv, pars) => {
     if (argv.one && !ps.length) return;
     promises.push(limiter.schedule(async () => {
       const cfg = acfg.map((v) => v ? '1' : '0').join('');
-      const res = await program.execute(argv, ps, cfg);
+      const res = await program.execute(argv, ps, parameter.hash(argv, cfg));
       if (!results[res]) {
         counter[res] = 0;
         results[res] = [];
@@ -216,7 +224,7 @@ module.exports.invariant = async (argv, pars) => {
         lcounter[ps.length] = {};
       }
       lcounter[ps.length][res] = (lcounter[ps.length][res] || 0) + 1;
-      results[res].push(ps);
+      results[res].push({ hash, p: ps });
     }, null));
   });
   await Promise.all(promises);

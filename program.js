@@ -12,7 +12,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
 
   logger.notice('Preparing for execution #', hash);
   logger.info('# of active parameters:', p.length, hash);
-  logger.trace('Active parameters:', p, hash);
+  logger.trace('Active parameters:', hash, p);
   let a = [...argv.args];
   logger.debug('# of fixed arguments:', a.length, hash);
   if (argv.split) {
@@ -25,7 +25,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
     logger.debug('Will be putting parameters into stdin', hash);
   }
   logger.debug('# of total arguments:', a.length, hash);
-  logger.trace('List of arguments:', a, hash);
+  logger.trace('List of arguments:', hash, a);
 
   const fnout = argv.recordStdout && path.join(argv.output, hash + '.out');
   const fnerr = argv.recordStderr && path.join(argv.output, hash + '.err');
@@ -38,8 +38,8 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       const res = await fs.readFile(fnres, 'utf-8');
       logger.notice(`Result was >>${res}<< for (cached) execution #`, hash);
       return res;
-    } catch {
-      logger.debug('Cache file not found for execution #', hash);
+    } catch (e) {
+      logger.debug('Cache file not found for execution #', hash, e);
     }
   }
 
@@ -246,21 +246,29 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   } else {
     if (fnres) {
       logger.debug('Write result file for #', hash);
-      await fs.writeFile(fnres, res, {
-        encoding: 'utf-8',
-        mode: 0o644,
-        flag: 'w',
-      });
+      try {
+        await fs.writeFile(fnres, res, {
+          encoding: 'utf-8',
+          mode: 0o644,
+          flag: 'w',
+        });
+      } catch (e) {
+        logger.warning('Cannot write result file (cache) for #', hash, e);
+      }
     }
     if (fnout || fnerr)
       logger.debug('Change sink and result file perms for #', hash);
     else
       logger.debug('Change result file perms for #', hash);
-    await Promise.all([
-      fnout && fs.chmod(fnout, 0o444),
-      fnerr && fs.chmod(fnerr, 0o444),
-      fnres && fs.chmod(fnres, 0o444),
-    ]);
+    try {
+      await Promise.all([
+        fnout && fs.chmod(fnout, 0o444),
+        fnerr && fs.chmod(fnerr, 0o444),
+        fnres && fs.chmod(fnres, 0o444),
+      ]);
+    } catch (e) {
+      logger.warning('Cannot chmod cache files for #', hash, e);
+    }
   }
 
   return res;
