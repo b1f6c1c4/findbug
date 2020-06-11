@@ -282,6 +282,40 @@ This option cannot be used together with --sup nor --inf. \
     }
     return true;
   })
+  .epilog('Examples:')
+  .epilog(`
+1) findbug -1xXCmE ls A B C
+
+  Find which argument(s) caused 'ls' to fail.
+
+    -xX means to tweak the arguments.
+    -1 means don't run 'ls' without any argument.
+    -C speeds up findbug drastically by such observation:
+        "If 'ls P Q' succeeded, 'ls P' and 'ls Q' will also succeed."
+    -m means to aim for smallest failing piece, instead of the vague claim:
+        'ls A B C'.
+    -E means to exhaust all possible minimal failing piece.
+`)
+  .epilog(`
+2) findbug -a input.txt -cME awk '{ a+=$1; } END { exit !(a > 100); }'
+
+  Solve backpack problem. Line of input.txt are weights (>=0) of the items.
+  (Find lines whose sum FAILS to be greater than 100, the more the better.)
+
+    -a input.txt means to tweak the lines of input.txt and pipe to 'awk'.
+    -c means:
+      "If 'awk' failed for some items, it will also fail for fewer items."
+    -M means to aim for largest successful piece (pack as many as possible)
+    -E means to find all possible largest solutions.
+
+  Note: Using 'findbug' with 'awk' like this will only give you a list of good parameter sets, but will not help you compare the price of them.
+`)
+  .epilog(`
+3) findbug -a input.txt -CME awk '{ a+=$1; } END { exit !(a <= 100); }
+
+  Same semantics as Example 2), but using -C for findbug. Here -C means:
+    "If 'awk' suceeded for some items, using fewer items will also work.
+`)
   .argv;
 
 if (argv.verbosity >= 3) {
