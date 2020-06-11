@@ -6,56 +6,6 @@ const program = require('./program');
 const Lattice = require('./lattice');
 const logger = require('./logger')('controller');
 
-/*
-module.exports.runInvariant = async (argv, p, runner) => {
-  logger.info('Use invariant strategy');
-  const overall = (argv.one ? -1 : 0) + 2 ** p.length;
-  logger.info('Total search space:', overall);
-
-  const limiter = new Bottleneck({
-    maxConcurrent: argv.maxProcs,
-  });
-
-  const impl = (dir) => async () => {
-    // The starting place
-    let N = dir ? (argv.one ? 1 : 0) : p.length;
-  };
-
-  const pros = [];
-  if (argv.sup) {
-    logger.info('Searching upwards');
-    pros.push(invariantImpl(true));
-  }
-  if (argv.inf) {
-    logger.info('Searching downwards');
-    pros.push(invariantImpl(false));
-  }
-  await Promise.all(pros);
-
-  logger.info('Started enumeration');
-  const cmb = Combinatorics.power(p);
-  logger.info('Finished enumeration');
-  const obj = { success: 0, fail: 0, error: 0 };
-  cmb.forEach((ps) => {
-    if (argv.one && !ps.length) return;
-    limiter.schedule(async (pp) => {
-      const res = await runner(pp);
-      obj[res]++;
-    }, ps, null);
-  });
-  await new Promise((resolve) => {
-    const fun = () => {
-      if (limiter.empty()) {
-        resolve();
-      } else {
-        setTimeout(fun, 100);
-      }
-    };
-    fun();
-  });
-};
-*/
-
 const makeLattice = async (argv, N) => {
   logger.debug('Creating lattice');
   const lattice = new Lattice(N);
@@ -157,24 +107,33 @@ const run = async (argv, lattice, runner) => {
   }
 };
 
+const picks = (pars, val) => (c) => pars.filter((v, i) => c[i] === val);
+
 const flow = (reverse) => async (argv, pars) => {
-  const pick = (c) => pars.filter((v, i) => c[i] === '1');
+  logger.info('Use lattice strategy');
+  const pick = picks(pars, '1');
   const lattice = await makeLattice(argv, pars.length);
 
-  let counter = {};
+  const counter = {};
+  const lcounter = [];
   const startTime = +new Date();
   await run(argv, lattice, async (cfg, exec, queue) => {
     exec.token = {};
-    exec.promise = program.execute(argv, pick(cfg), cfg, exec.token);
-    const result = await exec.promise;
-    counter[result] = (counter[result] || 0) + 1;
-    switch (result) {
+    const ps = pick(cfg);
+    exec.promise = program.execute(argv, ps, cfg, exec.token);
+    const res = await exec.promise;
+    if (!lcounter[ps.length]) {
+      lcounter[ps.length] = {};
+    }
+    counter[res] = (counter[res] || 0) + 1;
+    lcounter[ps.length][res] = (lcounter[ps.length][res] || 0) + 1;
+    switch (res) {
       case 'cancel':
         logger.debug('Dropping cancellation report of #', cfg);
         break;
       case 'success':
       case 'fail':
-        const r = !!((result === 'success') ^ reverse);
+        const r = !!((res === 'success') ^ reverse);
         logger.debug(`Will report ${r} for #`, cfg);
         queue.push({ cfg, result: r });
         break;
@@ -200,6 +159,9 @@ const flow = (reverse) => async (argv, pars) => {
     });
   }
 
+  logger.notice('Summary of execution:', counter);
+  logger.info('Summary of execution by level:', lcounter);
+
   logger.info('All steps completed, drafting report');
   const report = {
     version: process.env.npm_package_version,
@@ -210,6 +172,7 @@ const flow = (reverse) => async (argv, pars) => {
     endTime,
     duration: endTime - startTime,
     counter,
+    lcounter,
     summary: lattice.summary,
     suprema: lattice.suprema.map(pick),
     infima: lattice.infima.map(pick),
@@ -220,3 +183,61 @@ const flow = (reverse) => async (argv, pars) => {
 
 module.exports.covariant = flow(false);
 module.exports.contravariant = flow(true);
+
+module.exports.invariant = async (argv, pars) => {
+  logger.info('Use brute-force strategy');
+  const limiter = new Bottleneck({
+    maxConcurrent: argv.maxProcs,
+  });
+  const pick = picks(pars, true);
+
+  const startTime = +new Date();
+  logger.info('Started enumeration');
+  await new Promise((resolve) => { setTimeout(resolve, 10); });
+  const cmb = Combinatorics.baseN([false, true], pars.length);
+  logger.info('Finished enumeration');
+
+  const counter = {};
+  const lcounter = [];
+  const results = {};
+  const promises = [];
+  cmb.forEach((acfg) => {
+    const ps = pick(acfg);
+    if (argv.one && !ps.length) return;
+    promises.push(limiter.schedule(async () => {
+      const cfg = acfg.map((v) => v ? '1' : '0').join('');
+      const res = await program.execute(argv, ps, cfg);
+      if (!results[res]) {
+        counter[res] = 0;
+        results[res] = [];
+      }
+      counter[res]++;
+      if (!lcounter[ps.length]) {
+        lcounter[ps.length] = {};
+      }
+      lcounter[ps.length][res] = (lcounter[ps.length][res] || 0) + 1;
+      results[res].push(ps);
+    }, null));
+  });
+  await Promise.all(promises);
+  const endTime = +new Date();
+
+  logger.notice('Summary of execution:', counter);
+  logger.info('Summary of execution by level:', lcounter);
+
+  logger.info('All steps completed, drafting report');
+  const report = {
+    version: process.env.npm_package_version,
+    versions: process.versions,
+    argv,
+    pars,
+    startTime,
+    endTime,
+    duration: endTime - startTime,
+    counter,
+    lcounter,
+    ...results,
+  };
+  logger.trace('Report:', report);
+  return report;
+};

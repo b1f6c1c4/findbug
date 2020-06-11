@@ -286,12 +286,21 @@ if (argv.logFile) {
   logger.info('Attached log file:', pl);
 }
 
+const die = (code) => {
+  setTimeout(() => {
+    logger.fatal('dying with exit code:', code);
+    process.exit(code);
+  }, 10);
+};
+
 process.on('unhandledRejection', (e) => {
   logger.fatal('Unhandled rejection', e);
+  die(1);
 });
 
 process.on('uncaughtException', (e) => {
   logger.fatal('Uncaught exception', e);
+  die(1);
 });
 
 process.on('warning', (e) => {
@@ -300,12 +309,12 @@ process.on('warning', (e) => {
 
 process.on('SIGINT', () => {
   logger.fatal('SIGINT received');
-  process.exit(128 + 2);
+  die(128 + 2);
 });
 
 process.on('SIGTERM', () => {
   logger.fatal('SIGTERM received');
-  process.exit(128 + 15);
+  die(128 + 15);
 });
 
 logger.info('findbug version:', process.env.npm_package_version);
@@ -331,7 +340,10 @@ module.exports = async () => {
   } catch (e) {
     logger.fatal('During parameter read:', e);
     return 1;
+
   }
+  const overall = (argv.one ? -1 : 0) + 2 ** pars.length;
+  logger.notice('Total search space:', overall);
 
   let result;
   if (argv.invariant) {

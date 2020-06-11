@@ -11,21 +11,21 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   token.cancel = () => { cancelled = true };
 
   logger.notice('Preparing for execution #', hash);
-  logger.info('# of active parameters:', p.length);
-  logger.trace('Active parameters:', p);
+  logger.info('# of active parameters:', p.length, hash);
+  logger.trace('Active parameters:', p, hash);
   let a = [...argv.args];
-  logger.debug('# of fixed arguments:', a.length);
+  logger.debug('# of fixed arguments:', a.length, hash);
   if (argv.split) {
-    logger.debug('Splitting parameters into arguments');
+    logger.debug('Splitting parameters into arguments', hash);
     p.forEach((pv) => { a.push(...pv.split(argv.splitBy)); }); // TODO: better split method
   } else if (argv.xargs) {
-    logger.debug('Putting parameters into arguments');
+    logger.debug('Putting parameters into arguments', hash);
     a.push(...p);
   } else {
-    logger.debug('Will be putting parameters into stdin');
+    logger.debug('Will be putting parameters into stdin', hash);
   }
-  logger.info('# of total arguments:', a.length);
-  logger.trace('List of arguments:', a);
+  logger.debug('# of total arguments:', a.length, hash);
+  logger.trace('List of arguments:', a, hash);
 
   const fnout = path.join(argv.output, hash + '.out');
   const fnerr = path.join(argv.output, hash + '.err');
@@ -48,6 +48,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   logger.info('Spawning program for #', hash);
   const t = +new Date();
   let res;
+  let resolved = false;
   try {
     res = await new Promise((resolve) => {
       if (cancelled) {
@@ -67,7 +68,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
         cancelled = true;
         logger.info('Received cancellation request for #', hash);
         if (prog.exitCode !== null) {
-          logger.warning('When cancelling, the program already exited with', prog.exitCode);
+          logger.warning('When cancelling, the program already exited with', prog.exitCode, hash);
         }
         resolve('cancel');
       };
@@ -77,26 +78,26 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
         if (force || prog.killed) {
           switch (argv.timeout) {
             case 'fail':
-              logger.info('Program timeout (trigger failure) during #', hash);
+              logger.info('Program timeout (-> failure) during #', hash);
               resolve('fail');
               break;
             case 'error':
-              logger.warning('Program timeout (trigger error) during #', hash);
+              logger.warning('Program timeout (-> error) during #', hash);
               resolve('error');
               break;
             default:
-              logger.error('This should not happen', new Error());
+              logger.error('This should not happen', hash, new Error());
               resolve('error');
               break;
           }
         } else {
           switch (prog.exitCode ? argv.nonZero : argv.zero) {
             case 'fail':
-              logger.info(`Exit code ${prog.exitCode} (trigger failure) during #`, hash);
+              logger.info(`Exit code ${prog.exitCode} (-> failure) during #`, hash);
               resolve('fail');
               break;
             case 'error':
-              logger.warning(`Exit code ${prog.exitCode} (trigger error) during #`, hash);
+              logger.warning(`Exit code ${prog.exitCode} (-> error) during #`, hash);
               resolve('error');
               break;
             default:
@@ -111,17 +112,17 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       if (argv.timeLimit) {
         to = setTimeout(() => {
           if (prog.exitCode !== null) {
-            logger.warning('Looks like the program has already exited with', prog.exitCode);
+            logger.warning('Looks like the program has already exited with', prog.exitCode, hash);
             return;
           }
-          logger.notice('Sending SIGTERM to the timeout program');
+          logger.notice('Sending SIGTERM to the timeout program', hash);
           if (!prog.kill()) {
-            logger.warning('SIGTERM did not work, will try SIGKILL later');
+            logger.warning('SIGTERM did not work, will try SIGKILL later', hash);
             setTimeout(() => {
               if (prog.exitCode === null) {
-                logger.warning('Sending SIGKILL to the timeout program');
+                logger.warning('Sending SIGKILL to the timeout program', hash);
                 if (!prog.kill('SIGKILL')) {
-                  logger.error('Still not working, giveup; please kill yourself:', prog.pid);
+                  logger.error('Still not working, giveup; please kill yourself:', prog.pid, hash);
                   check(true);
                 }
               }
@@ -131,15 +132,20 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       }
 
       let stdoutGot;
-      prog.stdout.on('data', (data) => {
+      prog.stdout.on('data', async (data) => {
+        try {
+          if (!resolved) await fs.writeFile(fout, data);
+        } catch (e) {
+          logger.warning('Cannot write to sink files', hash, e);
+        }
         if (!stdoutGot) {
           switch (argv.stdout) {
             case 'fail':
-              logger.info('Received data from stdout (trigger failure) during #', hash);
+              logger.info('Received data from stdout (-> failure) during #', hash);
               resolve('fail');
               break;
             case 'error':
-              logger.warning('Received data from stdout (trigger error) during #', hash);
+              logger.warning('Received data from stdout (-> error) during #', hash);
               resolve('error');
               break;
             default:
@@ -148,21 +154,23 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
           }
           stdoutGot = true;
         }
-        fs.writeFile(fout, data).catch((e) => {
-          logger.error('Cannot write to sink files', e);
-        });
       });
 
       let stderrGot;
-      prog.stderr.on('data', (data) => {
+      prog.stderr.on('data', async (data) => {
+        try {
+          if (!resolved) await fs.writeFile(ferr, data);
+        } catch (e) {
+          logger.warning('Cannot write to sink files', hash, e);
+        }
         if (!stderrGot) {
           switch (argv.stderr) {
             case 'fail':
-              logger.info('Received data from stderr (trigger failure) during #', hash);
+              logger.info('Received data from stderr (-> failure) during #', hash);
               resolve('fail');
               break;
             case 'error':
-              logger.warning('Received data from stderr (trigger error) during #', hash);
+              logger.warning('Received data from stderr (-> error) during #', hash);
               resolve('error');
               break;
             default:
@@ -171,13 +179,10 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
           }
           stderrGot = true;
         }
-        fs.writeFile(ferr, data).catch((e) => {
-          logger.error('Cannot write to sink files', e);
-        });
       });
 
       prog.on('error', (err) => {
-        logger.error('Failed to start / kill the program:', err);
+        logger.error('Failed to start / kill the program:', hash, err);
         resolve('error');
       });
 
@@ -192,26 +197,27 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       });
 
       if (!argv.xargs) {
-        logger.debug('Putting parameters into stdin');
+        logger.debug('Putting parameters into stdin', hash);
         prog.stdin.setEncoding('utf-8');
         p.forEach((pv) => {
-          logger.trace('Writing to stdin:', pv);
+          logger.trace('Writing to stdin:', pv, hash);
           prog.stdin.write(pv);
           prog.stdin.write('\n');
         });
       }
-      logger.trace('Closing stdin');
+      logger.trace('Closing stdin', hash);
       prog.stdin.end();
     });
     const dur = new Date() - t;
+    resolved = true;
 
     logger.notice('Result for execution:', res, hash);
     if (res !== 'cancel') {
-      logger.info('Time consumption:', timespan.getString(dur, 'ms'));
+      logger.info('Time consumption:', timespan.getString(dur, 'ms'), hash);
     }
   } catch (err) {
-    logger.error('Unexpected error during #', hash);
-    logger.error('During execution:', err);
+    resolved = true;
+    logger.error('Unexpected error during #', hash, err);
     res = 'disaster';
   }
   logger.debug('Closing sink files for #', hash);
@@ -220,10 +226,10 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
     logger.debug('Remove sink and result files for #', hash);
     await Promise.all([
       fs.unlink(fnout).catch((e) => {
-        logger.error('Cannnot remove sink file:', e);
+        logger.error('Cannnot remove sink file:', hash, e);
       }),
       fs.unlink(fnerr).catch((e) => {
-        logger.error('Cannnot remove sink file:', e);
+        logger.error('Cannnot remove sink file:', hash, e);
       }),
     ]);
   } else {
