@@ -27,23 +27,26 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   logger.debug('# of total arguments:', a.length, hash);
   logger.trace('List of arguments:', a, hash);
 
-  const fnout = path.join(argv.output, hash + '.out');
-  const fnerr = path.join(argv.output, hash + '.err');
-  const fnres = path.join(argv.output, hash + '.res');
+  const fnout = argv.recordStdout && path.join(argv.output, hash + '.out');
+  const fnerr = argv.recordStderr && path.join(argv.output, hash + '.err');
+  const fnres = argv.cache && path.join(argv.output, hash + '.res');
 
-  try {
-    await fs.access(fnres, fs.constants.R_OK);
-    logger.info('Cache file found for execution #', hash);
-    const res = await fs.readFile(fnres, 'utf-8');
-    logger.notice(`Result was >>${res}<< for (cached) execution #`, hash);
-    return res;
-  } catch {
-    logger.debug('Cache file not found for execution #', hash);
+  if (fnres) {
+    try {
+      await fs.access(fnres, fs.constants.R_OK);
+      logger.info('Cache file found for execution #', hash);
+      const res = await fs.readFile(fnres, 'utf-8');
+      logger.notice(`Result was >>${res}<< for (cached) execution #`, hash);
+      return res;
+    } catch {
+      logger.debug('Cache file not found for execution #', hash);
+    }
   }
 
+  if (fnout || fnerr)
   logger.debug('Opening sink files for execution #', hash);
-  const fout = await fs.open(fnout, 'w', 0o644);
-  const ferr = await fs.open(fnerr, 'w', 0o644);
+  const fout = fnout && await fs.open(fnout, 'w', 0o644);
+  const ferr = fnerr && await fs.open(fnerr, 'w', 0o644);
 
   logger.info('Spawning program for #', hash);
   const t = +new Date();
@@ -134,7 +137,10 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       let stdoutGot;
       prog.stdout.on('data', async (data) => {
         try {
-          if (!resolved) await fs.writeFile(fout, data);
+          if (fnout && !resolved) {
+            logger.trace('Pipe stdout data to sink file', hash);
+            await fs.writeFile(fout, data);
+          }
         } catch (e) {
           logger.warning('Cannot write to sink files', hash, e);
         }
@@ -159,7 +165,10 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       let stderrGot;
       prog.stderr.on('data', async (data) => {
         try {
-          if (!resolved) await fs.writeFile(ferr, data);
+          if (fnerr && !resolved) {
+            logger.trace('Pipe stderr data to sink file', hash);
+            await fs.writeFile(ferr, data);
+          }
         } catch (e) {
           logger.warning('Cannot write to sink files', hash, e);
         }
@@ -220,30 +229,37 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
     logger.error('Unexpected error during #', hash, err);
     res = 'disaster';
   }
-  logger.debug('Closing sink files for #', hash);
-  await Promise.all([fout.close(), ferr.close()]);
+  if (fnout || fnerr)
+    logger.debug('Closing sink files for #', hash);
+  await Promise.all([fnout && fout.close(), fnerr && ferr.close()]);
   if (res === 'cancel' || res === 'disaster') {
-    logger.debug('Remove sink and result files for #', hash);
+    if (fnout || fnerr)
+      logger.debug('Remove sink and result files for #', hash);
     await Promise.all([
-      fs.unlink(fnout).catch((e) => {
+      fnout && fs.unlink(fnout).catch((e) => {
         logger.error('Cannnot remove sink file:', hash, e);
       }),
-      fs.unlink(fnerr).catch((e) => {
+      fnerr && fs.unlink(fnerr).catch((e) => {
         logger.error('Cannnot remove sink file:', hash, e);
       }),
     ]);
   } else {
-    logger.debug('Write result file for #', hash);
-    await fs.writeFile(fnres, res, {
-      encoding: 'utf-8',
-      mode: 0o644,
-      flag: 'w',
-    });
-    logger.debug('Change sink and result file perms for #', hash);
+    if (fnres) {
+      logger.debug('Write result file for #', hash);
+      await fs.writeFile(fnres, res, {
+        encoding: 'utf-8',
+        mode: 0o644,
+        flag: 'w',
+      });
+    }
+    if (fnout || fnerr)
+      logger.debug('Change sink and result file perms for #', hash);
+    else
+      logger.debug('Change result file perms for #', hash);
     await Promise.all([
-      fs.chmod(fnout, 0o444),
-      fs.chmod(fnerr, 0o444),
-      fs.chmod(fnres, 0o444),
+      fnout && fs.chmod(fnout, 0o444),
+      fnerr && fs.chmod(fnerr, 0o444),
+      fnres && fs.chmod(fnres, 0o444),
     ]);
   }
 

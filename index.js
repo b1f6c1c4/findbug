@@ -3,7 +3,7 @@ const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
 const rimraf = require('rimraf');
-const fs = require('fs').promises;
+const fs = require('fs');
 const timespan = require('timespan-parser');
 const parameter = require('./parameter');
 const controller = require('./controller');
@@ -158,7 +158,18 @@ This option cannot be used together with --sup nor --inf. \
     type: 'boolean',
   })
   .conflicts('exhaust', 'invariant')
-  .group(['verbose', 'quiet', 'output', 'result-file', 'log-file', 'prune'], 'Output and Caching Control:')
+  .group([
+    'verbose',
+    'quiet',
+    'output',
+    'result-file',
+    'log-file',
+    'cache',
+    'record-stdout',
+    'record-stderr',
+    'truncate',
+    'prune',
+  ], 'Output and Cache Control:')
   .option('v', {
     alias: 'verbose',
     describe: 'Increase verbosity by 1. Maximum verbosity -vvv.',
@@ -172,7 +183,7 @@ This option cannot be used together with --sup nor --inf. \
   .count(['v', 'q'])
   .option('n', {
     alias: 'dry-run',
-    describe: 'Don\'t run the progam, but check the configurations. --log-file will still be written.',
+    describe: 'Don\'t run the progam, but check the configurations. ATTENTION: --log-file will still be appended or overwritten.',
     type: 'boolean',
   })
   .option('w', {
@@ -180,6 +191,22 @@ This option cannot be used together with --sup nor --inf. \
     default: '.findbug-work',
     describe: 'A directory to store program outputs, also used as cache.',
     type: 'string',
+  })
+  .option('S', {
+    alias: 'cache',
+    default: true,
+    describe: 'Cache the execution result to the output directory. Disabling this will also disable reading cache.',
+    type: 'boolean',
+  })
+  .option('r', {
+    alias: 'record-stdout',
+    describe: 'Log the stdout of each execution to a separate file in the output directory.',
+    type: 'boolean',
+  })
+  .option('R', {
+    alias: 'record-stderr',
+    describe: 'Log the stderr of each execution to a separate file in the output directory.',
+    type: 'boolean',
   })
   .option('l', {
     alias: 'result-file',
@@ -192,6 +219,10 @@ This option cannot be used together with --sup nor --inf. \
     default: 'findbug.log',
     describe: 'File to store findbug log (append-only), relative to the output directory.',
     type: 'string',
+  })
+  .option('truncate', {
+    describe: 'Remove the log file before proceed. IS NOT affected by --dry-run.',
+    type: 'boolean',
   })
   .option('prune', {
     describe: 'Remove the entire output directory before proceed.',
@@ -282,8 +313,14 @@ if (argv.prune) {
 
 if (argv.logFile) {
   const pl = path.join(argv.output, argv.logFile);
-  logger.useLogFile(pl);
-  logger.info('Attached log file:', pl);
+  if (argv.truncate) {
+    logger.warning('Truncating the log file:', pl);
+    fs.truncateSync(pl);
+    logger.useLogFile(pl);
+    logger.info('Truncated the log file:', pl);
+  } else {
+    logger.info('Attached log file:', pl);
+  }
 }
 
 const die = (code) => {
@@ -368,7 +405,7 @@ module.exports = async () => {
 
   const op = path.join(argv.output, argv.resultFile);
   logger.info('Writing to output file:', op);
-  await fs.writeFile(op, JSON.stringify(result, null, 2), {
+  await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
     encoding: 'utf-8',
     mode: '644',
   });
