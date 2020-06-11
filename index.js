@@ -282,6 +282,27 @@ This option cannot be used together with --sup nor --inf. \
     }
     return true;
   })
+  .epilog('Choosing between -c/-C/-F as well as -m/-M:')
+  .epilog(`
+  Use -c if the target program is more likely to fail on small inputs.
+    - 'grep' fails if given too few inputs.
+    - 'find' fails if given too few starting points.
+  Use -C if the target program is more likely to fail on large inputs.
+    - 'ls' fails if ANY file is missing.
+    - 'gcc' fails if ANY source file contains error.
+  Use -F only if you can't use any of the strategies above.
+    - 'grep | xargs ls' fails on too few OR too many inputs (assume pipefail).
+    - 'bash -c "exit $RANDOM"' is wholly chaotic.
+
+  Use -m if you want to aim small.
+    - 'findbug -cm grep' Find minimum inputs on which 'grep' succeed.
+    - 'findbug -Cm ls'   Find minimum inputs on which 'ls' fail.
+  Use -M if you want to aim large.
+    - 'findbug -cM grep' Find maximum inputs on which 'grep' fail.
+    - 'findbug -CM ls'   Find maximum inputs on which 'ls' succeed.
+
+  Note: You cannot use -m or -M along with -F.
+`)
   .epilog('Examples:')
   .epilog(`
 1) findbug -1xXCmE ls A B C

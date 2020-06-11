@@ -1,7 +1,7 @@
 {
   "name": "findbug",
   "version": "0.0.0",
-  "description": "Find which line(s) of a file is causing the bug.",
+  "description": "Locate bug(s) for any program with YES/NO feedback only.",
   "main": "index.js",
   "bin": {
     "findbug": "./bin/findbug.js"
