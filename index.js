@@ -19,11 +19,9 @@ const argv = yargs
   .alias('h', 'help')
   .showHelpOnFail(false, 'Hint: You may need this: findbug --help')
   .version()
-  .alias('c', 'config')
-  .config('c', (p) => JSON5.parse(fs.readFileSync(p, 'utf-8')))
-  .group(['C', 'P', 'xargs', '1'], 'Program Execution Control:')
-  .option('C', {
-    alias: 'cwd',
+  .config('json', (p) => JSON5.parse(fs.readFileSync(p, 'utf-8')))
+  .group(['cwd', 'max-procs', 'xargs', 'one'], 'Program Execution Control:')
+  .option('cwd', {
     describe: 'Specify the cwd of the program',
     type: 'string',
   })
@@ -34,7 +32,8 @@ const argv = yargs
     type: 'number',
     requiresArg: 1,
   })
-  .option('xargs', {
+  .option('x', {
+    alias: 'xargs',
     describe: 'Parameters are provided to the program using arguments instead of stdin',
     type: 'boolean',
   })
@@ -43,63 +42,71 @@ const argv = yargs
     describe: 'At least one parameter is required to run the program',
     type: 'boolean',
   })
-  .group(['a', 'args-as-pars', 'split', 'split-by'], 'Debug Parameter Control:')
+  .group(['arg-file', 'in-place', 'split', 'split-by'], 'Debug Parameter Control:')
   .option('a', {
     alias: 'arg-file',
     describe: 'Read parameters from file instead of stdin',
     type: 'string',
   })
-  .option('args-as-pars', {
+  .option('X', {
+    alias: 'in-place',
     describe: 'Use the arguments as parameters',
     type: 'boolean',
   })
-  .option('split', {
+  .option('s', {
+    alias: 'split',
     describe: 'Split parameters when applying to the program',
     type: 'boolean',
   })
-  .option('split-by', {
+  .option('d', {
+    alias: 'split-by',
     describe: 'What to use to split a parameter',
     type: 'string',
     requiresArg: 1,
   })
   .implies('split-by', 'split')
   .implies('split', 'xargs')
-  .conflicts('a', 'self')
-  .group(['zero', 'non-zero', 'stdout', 'stderr'], 'Success / Failure / Error Detection:')
-  .option('zero', {
+  .group(['zero', 'non-zero', 'stdout', 'stderr', 'time-limit', 'timeout'], 'Success / Failure / Error Detection:')
+  .option('z', {
+    alias: 'zero',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
     describe: 'Meaning of getting zero exit code',
     type: 'string',
     requiresArg: 1,
   })
-  .option('non-zero', {
+  .option('Z', {
+    alias: 'non-zero',
     choices: ['ignore', 'fail', 'error'],
     default: 'fail',
     describe: 'Meaning of getting non-zero exit code',
     type: 'string',
     requiresArg: 1,
   })
-  .option('time-limit', {
+  .option('T', {
+    alias: 'time-limit',
     describe: 'Maximum execution time (ms, s, m, h, ...)',
     type: 'string',
     requiresArg: 1,
   })
-  .option('timeout', {
+  .option('t', {
+    alias: 'timeout',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
     describe: 'Meaning of not quitting before a deadline',
     type: 'string',
     requiresArg: 1,
   })
-  .option('stdout', {
+  .option('O', {
+    alias: 'stdout',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
     describe: 'Meaning of getting some output from program to stderr',
     type: 'string',
     requiresArg: 1,
   })
-  .option('stderr', {
+  .option('e', {
+    alias: 'stderr',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
     describe: 'Meaning of getting some output from program to stderr',
@@ -107,18 +114,19 @@ const argv = yargs
     requiresArg: 1,
   })
   .group(['sup', 'inf', 'exhaust', 'co', 'contra', 'invariant'], 'Searching Strategies and a priori Assumptions:')
-  .option('sup', {
-    alias: 'max',
+  .option('M', {
+    alias: ['sup', 'max'],
     describe: 'Search upwards: get largest / supremum subset(s)',
     type: 'boolean',
   })
-  .option('inf', {
-    alias: 'min',
+  .option('m', {
+    alias: ['inf', 'min'],
     describe: 'Search downwards: get smallest / infimum subset(s)',
     type: 'boolean',
   })
-  .option('co', {
-    describe: 'Adding parameter(s) to a successful execution will not fail. \
+  .option('c', {
+    alias: 'co',
+    describe: 'Assume that adding parameter(s) to a successful execution will not fail. \
 With --sup, findbug can find a supremum failing subset of parameters, to which \
 adding any item(s) will make the program success / error. \
 With --inf, findbug can find a infimum successful subset of parameters, from which \
@@ -126,8 +134,9 @@ removing any item(s) will make the program fail / error. \
 ',
     type: 'boolean',
   })
-  .option('contra', {
-    describe: 'Adding parameter(s) to a failing execution will not suceed. \
+  .option('C', {
+    alias: 'contra',
+    describe: 'Assume that adding parameter(s) to a failing execution will not succeed. \
 With --sup, findbug can find a supremum successful subset of parameters, to which \
 adding any item(s) will make the program fail / error. \
 With --inf, findbug can find a infimum failing subset of parameters, from which \
@@ -135,32 +144,33 @@ removing any item(s) will make the program success / error. \
 ',
     type: 'boolean',
   })
-  .option('invariant', {
-    describe: 'Neither of the previous two assumptions holds. \
-With --sup, findbug can find a subset of parameters s.t. \
-any other subset with more elements than it will exhibit the same success / failure pattern. \
-With --inf, findbug can find a subset of parameters s.t. \
-any other subset with less elements than it will exhibit the same success / failure pattern. \
+  .option('F', {
+    alias: 'invariant',
+    describe: 'Don\'t make assumptions, search the entire parameter space. \
+This option cannot be used together with --sup nor --inf. \
 ',
     type: 'boolean',
   })
-  .option('exhaust', {
-    describe: 'Find all possible solutions (CAUTION: may need very long time)',
+  .option('E', {
+    alias: 'exhaust',
+    describe: 'Find all solutions when using --co / --contra.',
     type: 'boolean',
   })
-  .group(['v', 'o', 'log-file', 'prune'], 'Output and Caching Control:')
+  .conflicts('exhaust', 'invariant')
+  .group(['verbose', 'quiet', 'output', 'log-file', 'prune'], 'Output and Caching Control:')
   .option('v', {
     alias: 'verbose',
-    describe: 'Increase verbosity by 1',
+    describe: 'Increase verbosity by 1 (maximum verbosity -vvv)',
     type: 'boolean',
   })
   .option('q', {
     alias: 'quiet',
-    describe: 'Decrease verbosity by 1',
+    describe: 'Decrease verbosity by 1 (minimum verbosity -qqqq)',
     type: 'boolean',
   })
   .count(['v', 'q'])
   .option('o', {
+    alias: 'output',
     default: '.findbug-work',
     describe: 'A directory to store program outputs, also used as cache',
     type: 'string',
@@ -201,13 +211,15 @@ any other subset with less elements than it will exhibit the same success / fail
   })
   .check((argv) => {
     let i = 0;
-    if (!(argv.sup || argv.inf))
-      throw new Error('Argument check failed: You must specify at least one of --sup or --inf');
     if (argv.co) i++;
     if (argv.contra) i++;
     if (argv.invariant) i++;
     if (i !== 1)
       throw new Error('Argument check failed: You must specify exactly one of --co, --contra, or --invariant');
+    if (!argv.invariant && !(argv.sup || argv.inf))
+      throw new Error('Argument check failed: You must specify at least one of --sup or --inf if you use --co or --contra');
+    else if (argv.invariant && (argv.sup || argv.inf))
+      throw new Error('Argument check failed: You cannot use --sup nor --inf if you use --invariant');
     return true;
   })
   .check((argv) => {
@@ -289,8 +301,8 @@ module.exports = async () => {
   let pars;
   try {
     pars = await parameter.parse(argv);
-    if (argv.one && !pars.length) {
-      logger.fatal('At least one parameter is required, due to --one');
+    if (!pars.length) {
+      logger.fatal('At least one parameter is required');
       return 2;
     }
   } catch (e) {

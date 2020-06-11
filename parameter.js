@@ -4,9 +4,9 @@ const Bottleneck = require('bottleneck');
 const Combinatorics = require('js-combinatorics');
 const logger = require('./logger')('parameter');
 
-module.exports.parse = async ({ argFile, argsAsPars, args }) => {
+module.exports.parse = async ({ argFile, inPlace, args }) => {
   let res;
-  if (argsAsPars) {
+  if (inPlace) {
     logger.info('Using arguments as parameters');
     res = [...args];
     args.length = 0;
