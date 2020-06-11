@@ -79,6 +79,11 @@ class Lattice {
     return !!s;
   }
 
+  async finalize() {
+    await this.rlWrite('finalize');
+    await this.rlRead();
+  }
+
   async list(str, singular) {
     this[str] = [];
     await this.rlWrite(`list ${str}`);

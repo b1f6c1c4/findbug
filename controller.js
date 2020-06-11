@@ -93,6 +93,10 @@ const run = async (argv, lattice, runner) => {
   } while (Object.keys(running).length);
   logger.info('No more running executions, start post-processing');
 
+  logger.debug('Double check to see if we have missing sup and inf');
+  await lattice.finalize();
+  await lattice.log();
+
   if (argv.sup) {
     if (lattice.summary.suprema) {
       logger.notice('Number of found suprema:', lattice.summary.suprema);

@@ -56,6 +56,8 @@ public:
     [[nodiscard]] bool is_decided(const elem &el) const;
 
     elem next();
+
+    void check_all();
 };
 
 #endif //LATTICE_TRI_SET_HPP

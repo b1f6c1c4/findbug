@@ -133,3 +133,10 @@ elem tri_set::next() {
 bool tri_set::is_decided(const elem &el) const {
     return el >= _us || el <= _ds;
 }
+
+void tri_set::check_all() {
+    for (const auto &el : _us)
+        check_inf(el);
+    for (const auto &el : _ds)
+        check_sup(el);
+}

@@ -84,6 +84,9 @@ int main(int argc, char **argv) {
                 return c;
             });
             std::cout << std::endl;
+        } else if (line == "finalize") {
+            ts.check_all();
+            std::cout << std::endl;
         }
     }
 }
