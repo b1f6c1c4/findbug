@@ -169,6 +169,11 @@ This option cannot be used together with --sup nor --inf. \
     type: 'boolean',
   })
   .count(['v', 'q'])
+  .option('n', {
+    alias: 'dry-run',
+    describe: 'Don\'t do anything, just check the configurations',
+    type: 'boolean',
+  })
   .option('o', {
     alias: 'output',
     default: '.findbug-work',
@@ -258,9 +263,13 @@ if (argv.verbosity >= 3) {
 }
 
 if (argv.prune) {
-  logger.warning('Pruning the output directory:', argv.o);
-  rimraf.sync(argv.o, { disableGlob: true });
-  logger.info('Pruned the output directory');
+  if (argv.dryRun) {
+    logger.warning('Would prune the output directory:', argv.o);
+  } else {
+    logger.warning('Pruning the output directory:', argv.o);
+    rimraf.sync(argv.o, { disableGlob: true });
+    logger.info('Pruned the output directory');
+  }
 }
 
 if (argv.logFile) {
@@ -311,11 +320,23 @@ module.exports = async () => {
   }
 
   if (argv.invariant) {
-    await controller.invariant(argv, pars);
+    if (argv.dryRun) {
+      logger.notice('Would run the invariant searching algorithm');
+    } else {
+      await controller.invariant(argv, pars);
+    }
   } else if (argv.co) {
-    await controller.covariant(argv, pars);
+    if (argv.dryRun) {
+      logger.notice('Would run the invariant searching algorithm');
+    } else {
+      await controller.covariant(argv, pars);
+    }
   } else if (argv.contra) {
-    await controller.contravariant(argv, pars);
+    if (argv.dryRun) {
+      logger.notice('Would run the invariant searching algorithm');
+    } else {
+      await controller.contravariant(argv, pars);
+    }
   }
 
   logger.debug('Exiting...');
