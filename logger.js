@@ -37,7 +37,7 @@ const fmt = (color) => (info) => {
       msg = `${msg} ${d.stack}`;
     } else {
       const data = stringify(d, null, 2);
-      if (data.includes('\n')) {
+      if (data && data.includes('\n')) {
         msg = `${msg}\n${data}`;
       } else if (i) {
         msg = `${msg} / ${data}`;

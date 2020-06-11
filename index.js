@@ -3,6 +3,7 @@ const path = require('path');
 const yargs = require('yargs');
 const JSON5 = require('json5');
 const rimraf = require('rimraf');
+const fs = require('fs').promises;
 const timespan = require('timespan-parser');
 const parameter = require('./parameter');
 const controller = require('./controller');
@@ -17,50 +18,50 @@ const argv = yargs
   .strict()
   .help('h')
   .alias('h', 'help')
-  .showHelpOnFail(false, 'Hint: You may need this: findbug --help')
+  .showHelpOnFail(false, 'Hint: You may need this: findbug --help.')
   .version()
   .config('json', (p) => JSON5.parse(fs.readFileSync(p, 'utf-8')))
   .group(['cwd', 'max-procs', 'xargs', 'one'], 'Program Execution Control:')
   .option('cwd', {
-    describe: 'Specify the cwd of the program',
+    describe: 'Specify the cwd of the program.',
     type: 'string',
   })
   .option('P', {
     alias: 'max-procs',
     default: os.cpus().length,
-    describe: 'Run up to max-procs processes concurrently',
+    describe: 'Run up to max-procs processes concurrently.',
     type: 'number',
     requiresArg: 1,
   })
   .option('x', {
     alias: 'xargs',
-    describe: 'Parameters are provided to the program using arguments instead of stdin',
+    describe: 'Parameters are provided to the program using arguments instead of stdin.',
     type: 'boolean',
   })
   .option('1', {
     alias: 'one',
-    describe: 'At least one parameter is required to run the program',
+    describe: 'At least one parameter is required to run the program.',
     type: 'boolean',
   })
   .group(['arg-file', 'in-place', 'split', 'split-by'], 'Debug Parameter Control:')
   .option('a', {
     alias: 'arg-file',
-    describe: 'Read parameters from file instead of stdin',
+    describe: 'Read parameters from file instead of stdin.',
     type: 'string',
   })
   .option('X', {
     alias: 'in-place',
-    describe: 'Use the arguments as parameters',
+    describe: 'Use the arguments as parameters.',
     type: 'boolean',
   })
   .option('s', {
     alias: 'split',
-    describe: 'Split parameters when applying to the program',
+    describe: 'Split parameters when applying to the program.',
     type: 'boolean',
   })
   .option('d', {
     alias: 'split-by',
-    describe: 'What to use to split a parameter',
+    describe: 'What to use to split a parameter.',
     type: 'string',
     requiresArg: 1,
   })
@@ -71,7 +72,7 @@ const argv = yargs
     alias: 'zero',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
-    describe: 'Meaning of getting zero exit code',
+    describe: 'Meaning of getting zero exit code.',
     type: 'string',
     requiresArg: 1,
   })
@@ -79,13 +80,13 @@ const argv = yargs
     alias: 'non-zero',
     choices: ['ignore', 'fail', 'error'],
     default: 'fail',
-    describe: 'Meaning of getting non-zero exit code',
+    describe: 'Meaning of getting non-zero exit code.',
     type: 'string',
     requiresArg: 1,
   })
   .option('T', {
     alias: 'time-limit',
-    describe: 'Maximum execution time (ms, s, m, h, ...)',
+    describe: 'Maximum execution time in ms, s, m, h, etc.',
     type: 'string',
     requiresArg: 1,
   })
@@ -93,7 +94,7 @@ const argv = yargs
     alias: 'timeout',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
-    describe: 'Meaning of not quitting before a deadline',
+    describe: 'Meaning of not quitting before a deadline.',
     type: 'string',
     requiresArg: 1,
   })
@@ -101,7 +102,7 @@ const argv = yargs
     alias: 'stdout',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
-    describe: 'Meaning of getting some output from program to stderr',
+    describe: 'Meaning of getting some output from program to stderr.',
     type: 'string',
     requiresArg: 1,
   })
@@ -109,19 +110,19 @@ const argv = yargs
     alias: 'stderr',
     choices: ['ignore', 'fail', 'error'],
     default: 'ignore',
-    describe: 'Meaning of getting some output from program to stderr',
+    describe: 'Meaning of getting some output from program to stderr.',
     type: 'string',
     requiresArg: 1,
   })
   .group(['sup', 'inf', 'exhaust', 'co', 'contra', 'invariant'], 'Searching Strategies and a priori Assumptions:')
   .option('M', {
     alias: ['sup', 'max'],
-    describe: 'Search upwards: get largest / supremum subset(s)',
+    describe: 'Search upwards: Get the largest / supremum subset(s).',
     type: 'boolean',
   })
   .option('m', {
     alias: ['inf', 'min'],
-    describe: 'Search downwards: get smallest / infimum subset(s)',
+    describe: 'Search downwards: Get the smallest / infimum subset(s).',
     type: 'boolean',
   })
   .option('c', {
@@ -157,36 +158,43 @@ This option cannot be used together with --sup nor --inf. \
     type: 'boolean',
   })
   .conflicts('exhaust', 'invariant')
-  .group(['verbose', 'quiet', 'output', 'log-file', 'prune'], 'Output and Caching Control:')
+  .group(['verbose', 'quiet', 'output', 'result-file', 'log-file', 'prune'], 'Output and Caching Control:')
   .option('v', {
     alias: 'verbose',
-    describe: 'Increase verbosity by 1 (maximum verbosity -vvv)',
+    describe: 'Increase verbosity by 1. Maximum verbosity -vvv.',
     type: 'boolean',
   })
   .option('q', {
     alias: 'quiet',
-    describe: 'Decrease verbosity by 1 (minimum verbosity -qqqq)',
+    describe: 'Decrease verbosity by 1. Minimum verbosity -qqqq.',
     type: 'boolean',
   })
   .count(['v', 'q'])
   .option('n', {
     alias: 'dry-run',
-    describe: 'Don\'t do anything, just check the configurations',
+    describe: 'Don\'t run the progam, but check the configurations. --log-file will still be written.',
     type: 'boolean',
   })
-  .option('o', {
+  .option('w', {
     alias: 'output',
     default: '.findbug-work',
-    describe: 'A directory to store program outputs, also used as cache',
+    describe: 'A directory to store program outputs, also used as cache.',
     type: 'string',
   })
-  .option('log-file', {
+  .option('l', {
+    alias: 'result-file',
+    default: 'findbug.json',
+    describe: 'File to store findbug output (override), relative to the output directory.',
+    type: 'string',
+  })
+  .option('L', {
+    alias: 'log-file',
     default: 'findbug.log',
-    describe: 'Location of the append-only execution log, relative to the output directory',
+    describe: 'File to store findbug log (append-only), relative to the output directory.',
     type: 'string',
   })
   .option('prune', {
-    describe: 'Remove the entire output directory before proceed',
+    describe: 'Remove the entire output directory before proceed.',
     type: 'boolean',
   })
   .check((argv) => {
@@ -264,16 +272,18 @@ if (argv.verbosity >= 3) {
 
 if (argv.prune) {
   if (argv.dryRun) {
-    logger.warning('Would prune the output directory:', argv.o);
+    logger.warning('Would prune the output directory:', argv.output);
   } else {
-    logger.warning('Pruning the output directory:', argv.o);
-    rimraf.sync(argv.o, { disableGlob: true });
+    logger.warning('Pruning the output directory:', argv.output);
+    rimraf.sync(argv.output, { disableGlob: true });
     logger.info('Pruned the output directory');
   }
 }
 
 if (argv.logFile) {
-  logger.useLogFile(path.join(argv.o, argv.logFile));
+  const pl = path.join(argv.output, argv.logFile);
+  logger.useLogFile(pl);
+  logger.info('Attached log file:', pl);
 }
 
 process.on('unhandledRejection', (e) => {
@@ -298,6 +308,10 @@ process.on('SIGTERM', () => {
   process.exit(128 + 15);
 });
 
+logger.info('findbug version:', process.env.npm_package_version);
+logger.info('CWD:', process.cwd());
+logger.trace('system versions:', process.versions);
+
 module.exports = async () => {
   logger.debug('argv:', argv);
 
@@ -319,25 +333,33 @@ module.exports = async () => {
     return 1;
   }
 
+  let result;
   if (argv.invariant) {
     if (argv.dryRun) {
       logger.notice('Would run the invariant searching algorithm');
     } else {
-      await controller.invariant(argv, pars);
+      result = await controller.invariant(argv, pars);
     }
   } else if (argv.co) {
     if (argv.dryRun) {
       logger.notice('Would run the invariant searching algorithm');
     } else {
-      await controller.covariant(argv, pars);
+      result = await controller.covariant(argv, pars);
     }
   } else if (argv.contra) {
     if (argv.dryRun) {
       logger.notice('Would run the invariant searching algorithm');
     } else {
-      await controller.contravariant(argv, pars);
+      result = await controller.contravariant(argv, pars);
     }
   }
+
+  const op = path.join(argv.output, argv.resultFile);
+  logger.info('Writing to output file:', op);
+  await fs.writeFile(op, JSON.stringify(result, null, 2), {
+    encoding: 'utf-8',
+    mode: '644',
+  });
 
   logger.debug('Exiting...');
   return 0;

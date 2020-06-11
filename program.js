@@ -27,9 +27,9 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   logger.info('# of total arguments:', a.length);
   logger.trace('List of arguments:', a);
 
-  const fnout = path.join(argv.o, hash + '.out');
-  const fnerr = path.join(argv.o, hash + '.err');
-  const fnres = path.join(argv.o, hash + '.res');
+  const fnout = path.join(argv.output, hash + '.out');
+  const fnerr = path.join(argv.output, hash + '.err');
+  const fnres = path.join(argv.output, hash + '.res');
 
   try {
     await fs.access(fnres, fs.constants.R_OK);
@@ -241,5 +241,5 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
     ]);
   }
 
-  return res === 'disaster' ? 'error' : res;
+  return res;
 };

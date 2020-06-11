@@ -160,10 +160,14 @@ const run = async (argv, lattice, runner) => {
 const flow = (reverse) => async (argv, pars) => {
   const pick = (c) => pars.filter((v, i) => c[i] === '1');
   const lattice = await makeLattice(argv, pars.length);
+
+  let counter = {};
+  const startTime = +new Date();
   await run(argv, lattice, async (cfg, exec, queue) => {
     exec.token = {};
     exec.promise = program.execute(argv, pick(cfg), cfg, exec.token);
     const result = await exec.promise;
+    counter[result] = (counter[result] || 0) + 1;
     switch (result) {
       case 'cancel':
         logger.debug('Dropping cancellation report of #', cfg);
@@ -174,12 +178,15 @@ const flow = (reverse) => async (argv, pars) => {
         logger.debug(`Will report ${r} for #`, cfg);
         queue.push({ cfg, result: r });
         break;
+      case 'disaster':
       case 'error':
         logger.debug('Will report improbable for #', cfg);
         queue.push({ cfg, result: null });
         break;
     }
   });
+  const endTime = +new Date();
+
   if (argv.sup) {
     lattice.suprema.forEach((c) => {
       logger.info('Found supremum:', c);
@@ -192,7 +199,23 @@ const flow = (reverse) => async (argv, pars) => {
       logger.notice('Found infimum:', pick(c));
     });
   }
-  logger.info('All steps completed');
+
+  logger.info('All steps completed, drafting report');
+  const report = {
+    version: process.env.npm_package_version,
+    versions: process.versions,
+    argv,
+    pars,
+    startTime,
+    endTime,
+    duration: endTime - startTime,
+    counter,
+    summary: lattice.summary,
+    suprema: lattice.suprema.map(pick),
+    infima: lattice.infima.map(pick),
+  };
+  logger.trace('Report:', report);
+  return report;
 };
 
 module.exports.covariant = flow(false);

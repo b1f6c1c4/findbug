@@ -4,7 +4,10 @@
   "description": "Find which line(s) of a file is causing the bug.",
   "main": "index.js",
   "bin": {
-    "bug-finder": "./bin/bug-finder.js"
+    "findbug": "./bin/findbug.js"
+  },
+  "scripts": {
+    "start": "./bin/findbug.js"
   },
   "repository": "https://github.com/b1f6c1c4/findbug.git",
   "keywords": [
