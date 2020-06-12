@@ -20,6 +20,10 @@ const binaryPaths = [
   '../build-bin/lattice.exe',
 ];
 
+if (process.env.FINDBUG_BINARY_PATH) {
+  binaryPaths.push(process.env.FINDBUG_BINARY_PATH);
+}
+
 const getGoodPaths = (orig) => {
   const paths = orig.map((p) => path.join(__dirname, p));
   const good = paths.filter((p) => {
@@ -31,10 +35,6 @@ const getGoodPaths = (orig) => {
     }
   });
   return { paths, good };
-}
-
-if (process.env.FINDBUG_BINARY_PATH) {
-  binaryPaths.push(process.env.FINDBUG_BINARY_PATH);
 }
 
 class LatticeBase {
@@ -311,4 +311,4 @@ class LatticeBinary extends LatticeBase {
   }
 }
 
-module.exports = !process.env.FINDBUG_USE_WASM ? LatticeBinary : LatticeWasm;
+module.exports = process.env.FINDBUG_USE_BINARY ? LatticeBinary : LatticeWasm;
