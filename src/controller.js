@@ -23,7 +23,7 @@ const makeLattice = async (argv, N) => {
       for (let i = 0; i < N; i++)
         await lattice.report('0'.repeat(i) + '1' + '0'.repeat(N - i - 1), false);
     }
-  } else if (!argv.one) {
+  } else if (argv.one) {
     logger.debug('Register the bottom of the lattice as improbable');
     await lattice.report('0'.repeat(N), null);
   }
@@ -34,10 +34,12 @@ const run = async (argv, lattice, runner) => {
   const running = {};
   const queue = [];
   await lattice.log();
+  let maybeNext = true;
   const check = async () => {
     if (queue.length)
       logger.debug('Checking reports');
     while (queue.length) {
+      maybeNext = true;
       const { cfg, result } = queue.splice(0, 1)[0];
       logger.info(`Reporting ${result} to #`, cfg);
       delete running[cfg];
@@ -51,12 +53,16 @@ const run = async (argv, lattice, runner) => {
   };
   do {
     await check();
+    if (!maybeNext) {
+      logger.debug('Waiting for an execution to finish');
+      await Promise.race(Object.values(running).map((r) => r.promise));
+      await check();
+    }
+
     if (Object.keys(running).length < argv.maxProcs) {
       logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
     } else {
       logger.debug('No more execution slots:', argv.maxProcs);
-      logger.debug('Waiting for an execution to finish');
-      await Promise.race(Object.values(running).map((r) => r.promise));
     }
     while (Object.keys(running).length < argv.maxProcs) {
       await check();
@@ -64,6 +70,7 @@ const run = async (argv, lattice, runner) => {
       const n = await lattice.next(argv.sup, argv.inf);
       if (!n) {
         logger.debug('No more suggestions, waiting for existing executions to finish');
+        maybeNext = false;
         break;
       }
       if (n.cancel.length) {

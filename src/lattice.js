@@ -167,8 +167,10 @@ class LatticeWasm extends LatticeBase {
 
   async listImpl(f, str, singular) {
     const prog = await this.Module;
+    this[str] = [];
     logger.trace('Calling lattice:', `list_${str}`);
     LatticeWasm.toArray(await prog[`list_${str}`]()).forEach((s) => {
+      this[str].push(s);
       f(`${singular || str}:`, s);
     });
   }
