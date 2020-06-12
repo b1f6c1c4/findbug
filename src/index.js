@@ -4,10 +4,13 @@ const yargs = require('yargs');
 const JSON5 = require('json5');
 const rimraf = require('rimraf');
 const fs = require('fs');
+const chalk = require('chalk');
 const timespan = require('timespan-parser');
+const shellescape = require('shell-escape');
 const mkdirp = require('mkdirp');
 const parameter = require('./parameter');
 const controller = require('./controller');
+const program = require('./program');
 const logger = require('./logger')('main');
 
 const argv = yargs
@@ -162,6 +165,7 @@ This option cannot be used together with --sup nor --inf. \
   .group([
     'verbose',
     'quiet',
+    'summary',
     'output',
     'result-file',
     'log-file',
@@ -182,6 +186,11 @@ This option cannot be used together with --sup nor --inf. \
     type: 'boolean',
   })
   .count(['v', 'q'])
+  .option('S', {
+    alias: 'summary',
+    describe: 'Write a nice summary report to stdout when finish.',
+    type: 'boolean',
+  })
   .option('n', {
     alias: 'dry-run',
     describe: 'Don\'t run the progam, but check the configurations. ATTENTION: --log-file will still be appended or overwritten.',
@@ -193,8 +202,7 @@ This option cannot be used together with --sup nor --inf. \
     describe: 'A directory to store program outputs, also used as cache. NOT affected by --dry-run. If not exist, will do mkdir -p',
     type: 'string',
   })
-  .option('S', {
-    alias: 'cache',
+  .option('cache', {
     default: true,
     describe: 'Cache the execution result to the output directory. Disabling this will also disable reading cache.',
     type: 'boolean',
@@ -305,17 +313,19 @@ This option cannot be used together with --sup nor --inf. \
 `)
   .epilog('Examples:')
   .epilog(`
-1) findbug -1xXCmE ls A B C
+1) findbug -1xXCmEqS ls A B C
 
   Find which argument(s) caused 'ls' to fail.
 
-    -xX means to tweak the arguments.
     -1 means don't run 'ls' without any argument.
+    -xX means to tweak the arguments.
     -C speeds up findbug drastically by such observation:
         "If 'ls P Q' succeeded, 'ls P' and 'ls Q' will also succeed."
     -m means to aim for smallest failing piece, instead of the vague claim:
         'ls A B C'.
     -E means to exhaust all possible minimal failing piece.
+    -q means to be quiet.
+    -S means to produce a nice summary report.
 `)
   .epilog(`
 2) findbug -a input.txt -cME awk '{ a+=$1; } END { exit !(a > 100); }'
@@ -474,6 +484,41 @@ module.exports = async () => {
     await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
       encoding: 'utf-8',
       mode: '644',
+    });
+  }
+
+  logger.info('Drafting a nice summary report');
+  const prog = (p) => {
+    const g = shellescape([argv.program]);
+    let a = shellescape(argv.args);
+    if (a.length) a = ' ' + a;
+    if (argv.xargs) {
+      const sp = shellescape(program.split(argv, p));
+      return chalk`$ {bold {yellow ${g}}}{gray ${a}} {bold ${sp}}`;
+    }
+    return chalk`$ {bold {yellow ${g}}}{gray ${a}} {bold <<"EOF"}\n${p.join('\n')}\n{bold EOF}`;
+  };
+  if (argv.sup) {
+    result.suprema.forEach((p) => {
+      if (argv.co) {
+        console.log(chalk`{cyan # The following} {red failed}{cyan , but} {green won't for more items}:`);
+      } else {
+        console.log(chalk`{cyan # The following} {green succeeded}{cyan , but} {red won't for more items}:`);
+      }
+      console.log(prog(p));
+    });
+  }
+  if (argv.inf) {
+    result.infima.forEach((p) => {
+      const ag = !argv.one || p.length !== 1;
+      if (argv.co) {
+        const aug = ag ? chalk`{cyan , but} {red won't for fewer items}` : '';
+        console.log(chalk`{cyan # The following} {bold {green succeeded}}${aug}:`);
+      } else {
+        const aug = ag ? chalk`{cyan , but} {green won't for fewer items}` : '';
+        console.log(chalk`{cyan # The following} {bold {red failed}}${aug}:`);
+      }
+      console.log(prog(p));
     });
   }
 

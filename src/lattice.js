@@ -1,7 +1,41 @@
 const cp = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const readline = require('readline');
 const logger = require('./logger')('lattice');
+
+const wasmPaths = [
+  '../build-wasm/lattice.js',
+  '../build-wasm/lattice.wasm.js',
+];
+
+if (process.env.FINDBUG_WASM_PATH) {
+  wasmPaths.push(process.env.FINDBUG_WASM_PATH);
+}
+
+const binaryPaths = [
+  './lattice/cmake-build-debug/lattice',
+  './lattice/cmake-build-debug/lattice.exe',
+  '../build-bin/lattice',
+  '../build-bin/lattice.exe',
+];
+
+const getGoodPaths = (orig) => {
+  const paths = orig.map((p) => path.join(__dirname, p));
+  const good = paths.filter((p) => {
+    try {
+      fs.accessSync(p, fs.constants.R_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  return { paths, good };
+}
+
+if (process.env.FINDBUG_BINARY_PATH) {
+  binaryPaths.push(process.env.FINDBUG_BINARY_PATH);
+}
 
 class LatticeBase {
   async next(sup, inf) {
@@ -58,8 +92,13 @@ class LatticeBase {
 class LatticeWasm extends LatticeBase {
   constructor() {
     super();
-    logger.debug('Loading lattice wasm from:', path.join(__dirname, 'lattice.wasm.js'));
-    this.Module = require('../build/lattice.wasm')().then((prog) => {
+    const { paths, good } = getGoodPaths(wasmPaths);
+    if (!good.length) {
+      logger.fatal('No valid lattice wasm found in:', paths);
+      throw new Error('Cannot load lattice wasm');
+    }
+    logger.debug('Loading lattice wasm from:', good[0]);
+    this.Module = require(good[0])().then((prog) => {
       logger.debug('Lattice wasm loaded successfully');
       return prog;
     }).catch((e) => {
@@ -163,9 +202,13 @@ class LatticeWasm extends LatticeBase {
 class LatticeBinary extends LatticeBase {
   constructor(N) {
     super();
-    const pa = process.env.FINDBUG_LATTICE_BINARY || path.join(__dirname, 'lattice', 'cmake-build-debug', 'lattice');
-    logger.debug('Spawning lattice binary from:', pa);
-    this.prog = cp.spawn(pa, [N], {
+    const { paths, good } = getGoodPaths(binaryPaths);
+    if (!good.length) {
+      logger.fatal('No valid lattice binary found in:', paths);
+      throw new Error('Cannot load lattice binary');
+    }
+    logger.debug('Spawning lattice binary from:', good[0]);
+    this.prog = cp.spawn(good[0], [N], {
       stdio: ['pipe', 'pipe', 'inherit'],
       detached: false,
       windowsHide: true,
@@ -266,4 +309,4 @@ class LatticeBinary extends LatticeBase {
   }
 }
 
-module.exports = process.env.FINDBUG_LATTICE_USE_BINARY ? LatticeBinary : LatticeWasm;
+module.exports = !process.env.FINDBUG_USE_WASM ? LatticeBinary : LatticeWasm;

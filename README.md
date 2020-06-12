@@ -1,6 +1,39 @@
 # findbug
 
+[![npm version](https://img.shields.io/npm/v/findbug.svg?style=flat)](https://www.npmjs.com/package/findbug)
+[![npm downloads](https://img.shields.io/npm/dt/findbug.svg?style=flat)](https://www.npmjs.com/package/findbug)
+[![npm bundle size](https://img.shields.io/bundlephobia/min/findbug.svg?style=flat)](https://www.npmjs.com/package/findbug)
+[![npm license](https://img.shields.io/npm/l/findbug)](https://www.npmjs.com/package/findbug)
+
 > Locate bug(s) for ANY program with YES/NO feedback only.
+
+## TL;DR
+
+Install:
+```bash
+# Note: findbug is partially written in C++
+# Compiling C++ to wasm in order to release 100% nodejs code is TODO
+$ which cmake
+$ npm install -g findbug
+```
+
+Now try this: find which argument(s) caused `ls` to fail:
+```bash
+$ findbug -1xXCmEqS ls A B C
+```
+
+`findbug` works NOT by looking at the output of 'ls';
+instead, it works by running `ls A B C`, `ls A B`, `ls B C`, ... and summarize their exit codes.
+It seems to be really dumb, but sometimes program errors without ANY useful information.
+`findbug` can help you locate the *minimum failing pieces* of code.
+
+- `-1` means don't run `ls` without any argument.
+- `-xX` means to tweak the arguments.
+- `-C` speeds up findbug drastically by such observation: "If `ls P Q` succeeded, `ls P` and `ls Q` will also succeed."
+- `-m` means to aim for smallest failing piece, instead of the vague claim: `ls A B C`.
+- `-E` means to exhaust all possible minimal failing piece.
+- `-q` means to be quiet.
+- `-S` means to produce a nice summary report.
 
 ## Usage
 
@@ -10,7 +43,7 @@ findbug [<options>] [--] <program> [<args>...]
 Program Execution Control:
   --cwd            Specify the cwd of the program.                      [string]
   -P, --max-procs  Run up to max-procs processes concurrently.
-                                                          [number] [default:   ]
+                                                          [number] [default: 16]
   -x, --xargs      Parameters are provided to the program using arguments
                    instead of stdin.                                   [boolean]
   -1, --one        At least one parameter is required to run the program.
@@ -62,6 +95,8 @@ Searching Strategies and a priori Assumptions:
 Output and Cache Control:
   -v, --verbose        Increase verbosity by 1. Maximum verbosity -vvv.  [count]
   -q, --quiet          Decrease verbosity by 1. Minimum verbosity -qqqq. [count]
+  -S, --summary        Write a nice summary report to stdout when finish.
+                                                                       [boolean]
   -w, --output         A directory to store program outputs, also used as cache.
                        NOT affected by --dry-run. If not exist, will do mkdir -p
                                              [string] [default: ".findbug-work"]
@@ -69,7 +104,7 @@ Output and Cache Control:
                        output directory.      [string] [default: "findbug.json"]
   -L, --log-file       File to store findbug log (append-only), relative to the
                        output directory.       [string] [default: "findbug.log"]
-  -S, --cache          Cache the execution result to the output directory.
+  --cache              Cache the execution result to the output directory.
                        Disabling this will also disable reading cache.
                                                        [boolean] [default: true]
   -r, --record-stdout  Log the stdout of each execution to a separate file in
@@ -108,39 +143,8 @@ Choosing between -c/-C/-F as well as -m/-M:
     - 'findbug -CM ls'   Find maximum inputs on which 'ls' succeed.
 
   Note: You cannot use -m or -M along with -F.
-
-Examples:
-
-1) findbug -1xXCmE ls A B C
-
-  Find which argument(s) caused 'ls' to fail.
-
-    -xX means to tweak the arguments.
-    -1 means don't run 'ls' without any argument.
-    -C speeds up findbug drastically by such observation:
-        "If 'ls P Q' succeeded, 'ls P' and 'ls Q' will also succeed."
-    -m means to aim for smallest failing piece, instead of the vague claim:
-        'ls A B C'.
-    -E means to exhaust all possible minimal failing piece.
-
-
-2) findbug -a input.txt -cME awk '{ a+=$1; } END { exit !(a > 100); }'
-
-  Solve backpack problem. Line of input.txt are weights (>=0) of the items.
-  (Find lines whose sum FAILS to be greater than 100, the more the better.)
-
-    -a input.txt means to tweak the lines of input.txt and pipe to 'awk'.
-    -c means:
-      "If 'awk' failed for some items, it will also fail for fewer items."
-    -M means to aim for largest successful piece (pack as many as possible)
-    -E means to find all possible largest solutions.
-
-  Note: Using 'findbug' with 'awk' like this will only give you a list of good
-  parameter sets, but will not help you compare the price of them.
-
-
-3) findbug -a input.txt -CME awk '{ a+=$1; } END { exit !(a <= 100); }
-
-  Same semantics as Example 2), but using -C for findbug. Here -C means:
-    "If 'awk' suceeded for some items, using fewer items will also work.
 ```
+
+## License
+
+MIT
