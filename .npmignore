@@ -136,7 +136,4 @@ _deps
 
 # End of https://www.toptal.com/developers/gitignore/api/cmake
 
-/lattice.js
-/lattice.js.mem
-/lattice.wasm.js
-/lattice.wasm.wasm
+.idea

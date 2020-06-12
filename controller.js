@@ -4,7 +4,7 @@ const Bottleneck = require('bottleneck');
 const Combinatorics = require('js-combinatorics');
 const parameter = require('./parameter');
 const program = require('./program');
-const Lattice = require('./lattice');
+const Lattice = require('./latticeWrapper');
 const logger = require('./logger')('controller');
 
 const makeLattice = async (argv, N) => {
@@ -114,6 +114,8 @@ const run = async (argv, lattice, runner) => {
       logger.warning('No infimum found');
     }
   }
+
+  lattice.quit();
 };
 
 const picks = (pars, val) => (c) => pars.filter((v, i) => c[i] === val);
