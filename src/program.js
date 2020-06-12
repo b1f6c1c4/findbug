@@ -2,6 +2,7 @@ const path = require('path');
 const fs0 = require('fs');
 const cp = require('child_process');
 const timespan = require('timespan-parser');
+const { parse } = require('shell-quote');
 const logger = require('./logger')('program');
 
 const fs = { ...fs0.promises, constants: fs0.constants };
@@ -10,7 +11,7 @@ module.exports.split = (argv, p, a0, hash) => {
   const a = a0 || [];
   if (argv.split) {
     hash && logger.debug('Splitting parameters into arguments', hash);
-    p.forEach((pv) => { a.push(...pv.split(argv.splitBy)); }); // TODO: better split method
+    p.forEach((pv) => { a.push(...parse(pv)); });
   } else if (argv.xargs) {
     hash && logger.debug('Putting parameters into arguments', hash);
     a.push(...p);

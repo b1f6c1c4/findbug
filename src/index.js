@@ -6,7 +6,7 @@ const rimraf = require('rimraf');
 const fs = require('fs');
 const chalk = require('chalk');
 const timespan = require('timespan-parser');
-const shellescape = require('shell-escape');
+const { quote } = require('shell-quote');
 const mkdirp = require('mkdirp');
 const parameter = require('./parameter');
 const controller = require('./controller');
@@ -60,16 +60,9 @@ const argv = yargs
   })
   .option('s', {
     alias: 'split',
-    describe: 'Split parameters when applying to the program.',
+    describe: 'Split parameters (with bash-like rules) when applying to the program.',
     type: 'boolean',
   })
-  .option('d', {
-    alias: 'split-by',
-    describe: 'What to use to split a parameter.',
-    type: 'string',
-    requiresArg: 1,
-  })
-  .implies('split-by', 'split')
   .implies('split', 'xargs')
   .group(['zero', 'non-zero', 'stdout', 'stderr', 'time-limit', 'timeout'], 'Success / Failure / Error Detection:')
   .option('z', {
@@ -255,11 +248,6 @@ This option cannot be used together with --sup nor --inf. \
     argv.program = program;
     argv.args = args;
     p.length = 0;
-    return true;
-  })
-  .check((argv) => {
-    if (argv.split && argv.splitBy === undefined)
-      argv.splitBy = ' ';
     return true;
   })
   .check((argv) => {
@@ -489,11 +477,11 @@ module.exports = async () => {
 
   logger.info('Drafting a nice summary report');
   const prog = (p) => {
-    const g = shellescape([argv.program]);
-    let a = shellescape(argv.args);
+    const g = quote([argv.program]);
+    let a = quote(argv.args);
     if (a.length) a = ' ' + a;
     if (argv.xargs) {
-      const sp = shellescape(program.split(argv, p));
+      const sp = quote(program.split(argv, p));
       return chalk`$ {bold {yellow ${g}}}{gray ${a}} {bold ${sp}}`;
     }
     return chalk`$ {bold {yellow ${g}}}{gray ${a}} {bold <<"EOF"}\n${p.join('\n')}\n{bold EOF}`;
