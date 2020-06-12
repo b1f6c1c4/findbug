@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <list>
 #include <memory>
+#include <algorithm>
 #include "homo_set.hpp"
 
 class tri_set {
@@ -17,7 +18,11 @@ class tri_set {
             bool operator()(const aelem &l, const aelem &r) const {
                 auto lp = (UD ? l.get_size() - l.hier() : l.hier()) + l._bonus;
                 auto rp = (UD ? r.get_size() - r.hier() : r.hier()) + r._bonus;
-                return lp < rp;
+                if (lp < rp)
+                    return true;
+                if (lp > rp)
+                    return false;
+                return std::lexicographical_compare(l._v.begin(), l._v.end(), r._v.begin(), r._v.end());
             }
         };
     };

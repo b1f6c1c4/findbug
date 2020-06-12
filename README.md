@@ -34,7 +34,7 @@ It seems to be really dumb, but sometimes program errors without ANY useful info
 
 ## Usage
 
-```bash
+```
 findbug [<options>] [--] <program> [<args>...]
 
 Program Execution Control:

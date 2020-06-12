@@ -5,8 +5,8 @@ const readline = require('readline');
 const logger = require('./logger')('lattice');
 
 const wasmPaths = [
-  '../build-wasm/lattice.js',
-  '../build-wasm/lattice.wasm.js',
+  '../build/lattice.js',
+  '../build/lattice.wasm.js',
 ];
 
 if (process.env.FINDBUG_WASM_PATH) {
@@ -16,8 +16,6 @@ if (process.env.FINDBUG_WASM_PATH) {
 const binaryPaths = [
   './lattice/cmake-build-debug/lattice',
   './lattice/cmake-build-debug/lattice.exe',
-  '../build-bin/lattice',
-  '../build-bin/lattice.exe',
 ];
 
 if (process.env.FINDBUG_BINARY_PATH) {
