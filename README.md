@@ -12,8 +12,9 @@
 Install:
 ```bash
 # Note: findbug is partially written in C++
-# Compiling C++ to wasm in order to release 100% nodejs code is TODO
-$ which cmake
+# Compiling C++ to wasm in order to release 100% nodejs code is still a TODO
+$ which cmake make
+# We rely on npm postinstall scripts to run cmake && make:
 $ npm install -g findbug
 ```
 
