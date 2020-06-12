@@ -83,12 +83,15 @@ const run = async (argv, lattice, runner) => {
       runner(n.start, hash, running[n.start] = {}, queue);
     }
 
-    await lattice.log();
     if (!argv.exhaust) {
+      await lattice.finalize();
+      await lattice.log();
       if ((argv.sup && lattice.summary.suprema) || argv.inf && lattice.summary.infima) {
         logger.info('Supremum / Infimum found, stop running');
         break;
       }
+    } else {
+      await lattice.log();
     }
   } while (Object.keys(running).length);
   logger.info('No more running executions, start post-processing');

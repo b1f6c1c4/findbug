@@ -17,7 +17,7 @@ class tri_set {
             bool operator()(const aelem &l, const aelem &r) const {
                 auto lp = (UD ? l.get_size() - l.hier() : l.hier()) + l._bonus;
                 auto rp = (UD ? r.get_size() - r.hier() : r.hier()) + r._bonus;
-                return lp > rp;
+                return lp < rp;
             }
         };
     };

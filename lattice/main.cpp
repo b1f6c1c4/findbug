@@ -55,6 +55,8 @@ int main(int argc, char **argv) {
             std::cout << ts.get_inf().size() << std::endl;
             std::cout << ts.get_ds().size() << std::endl;
             std::cout << running.size() << std::endl;
+            std::cout << ts.get_us().best_hier() << std::endl;
+            std::cout << ts.get_ds().best_hier() << std::endl;
         } else if (line == "list true") {
             std::cout << ts.get_us() << std::endl;
         } else if (line == "list suprema") {

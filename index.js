@@ -382,6 +382,8 @@ if (argv.logFile) {
     logger.useLogFile(pl);
     logger.info('Attached log file:', pl);
   }
+} else {
+  logger.warning('No log file specified');
 }
 
 const die = (code) => {

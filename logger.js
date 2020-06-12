@@ -57,6 +57,7 @@ const tc = new transports.Console({
     format.printf(fmt(true)),
   ),
 });
+let tf = [];
 
 const logger = createLogger({
   level: 'trace',
@@ -69,7 +70,8 @@ const logger = createLogger({
   transports: [tc],
 });
 
-let gLevel = lvls.levels.notice;
+let gsLevel = 'notice';
+let gLevel = lvls.levels[gsLevel];
 
 module.exports = (lbl) => {
   const regularize = (k) => (msg, ...data) => {
@@ -89,19 +91,23 @@ module.exports = (lbl) => {
   customApi.setLevel = (level) => {
     if (level === null) {
       gLevel = -1;
-      tc.level = 'fatal';
+      tc.level = gsLevel = 'fatal';
+      tf.forEach((t) => { t.level = 'fatal'; });
       tc.silent = true;
     } else {
       gLevel = lvls.levels[level];
-      tc.level = level;
+      tc.level = gsLevel = level;
+      tf.forEach((t) => { t.level = level; });
       tc.silent = false;
     }
   };
   customApi.useLogFile = (filename) => {
-    logger.add(new transports.File({
-      level: 'trace',
+    const t = new transports.File({
+      level: gsLevel,
       filename,
-    }));
+    });
+    tf.push(t);
+    logger.add(t);
   };
   Object.keys(lvls.levels).forEach((level) => {
     customApi[level] = regularize(level);

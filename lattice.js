@@ -97,14 +97,14 @@ class Lattice {
     await this.rlRead();
   }
 
-  async list(str, singular) {
+  async list(f, str, singular) {
     this[str] = [];
     await this.rlWrite(`list ${str}`);
     while (true) {
       const s = await this.rlRead();
       if (!s) break;
       this[str].push(s);
-      logger.debug(`${singular || str}:`, s);
+      f(`${singular || str}:`, s);
     }
   }
 
@@ -117,28 +117,32 @@ class Lattice {
       infima: +await this.rlRead(),
       false: +await this.rlRead(),
       running: +await this.rlRead(),
+      bestHierU: +await this.rlRead(),
+      bestHierD: +await this.rlRead(),
     };
     logger.notice(
-      'Number of T / U / F:',
+      'Number of T/S/U/I/F:',
       this.summary.true,
+      this.summary.suprema,
       this.summary.improbable,
+      this.summary.infima,
       this.summary.false,
     );
     logger.notice(
-      'Number of sup / inf:',
-      this.summary.suprema,
-      this.summary.infima,
+      'Number of best hier:',
+      this.summary.bestHierU,
+      this.summary.bestHierD,
     );
-    logger.notice('Number of running executions:', this.summary.running);
 
-    await this.list('suprema', 'supremum');
-    await this.list('infima', 'infimum');
+    logger.debug('Number of running executions:', this.summary.running);
+    await this.list(logger.debug, 'suprema', 'supremum');
+    await this.list(logger.debug, 'infima', 'infimum');
 
     if (logger.getLevel() < 6) return;
-    await this.list('true');
-    await this.list('improbable');
-    await this.list('false');
-    await this.list('running');
+    await this.list(logger.trace, 'true');
+    await this.list(logger.trace, 'improbable');
+    await this.list(logger.trace, 'false');
+    await this.list(logger.trace, 'running');
   }
 }
 

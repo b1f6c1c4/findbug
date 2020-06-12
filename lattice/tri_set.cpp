@@ -55,10 +55,10 @@ bool tri_set::mark_true(const elem &el) {
             auto x = el & e;
             xa &= e;
             if (!(x <= _ds) && !_zs.contains(x))
-                _uq.emplace(el, 0ll);
+                _uq.emplace(x, 0ll);
         }
         if (!(xa <= _ds) && !_zs.contains(xa))
-            _uq.emplace(el, 0ll);
+            _uq.emplace(xa, 0ll);
         for (const auto &e : el.downs())
             if (!(e <= _ds) && !_zs.contains(e))
                 _uq.emplace(e, 0ll);
@@ -85,13 +85,13 @@ bool tri_set::mark_false(const elem &el) {
     if (!check_sup(el)) {
         auto xa = el;
         for (const auto &e : _ds) {
-            auto x = el & e;
-            xa &= e;
+            auto x = el | e;
+            xa |= e;
             if (!(x >= _us) && !_zs.contains(x))
-                _dq.emplace(el, 0ll);
+                _dq.emplace(x, 0ll);
         }
         if (!(xa >= _us) && !_zs.contains(xa))
-            _dq.emplace(el, 0ll);
+            _dq.emplace(xa, 0ll);
         for (const auto &e : el.ups())
             if (!(e >= _us) && !_zs.contains(e))
                 _dq.emplace(e, 0ll);

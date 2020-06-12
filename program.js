@@ -10,8 +10,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
   let cancelled = false;
   token.cancel = () => { cancelled = true };
 
-  logger.notice('Preparing for execution #', hash);
-  logger.info('# of active parameters:', p.length, hash);
+  logger.notice('Preparing execution of', p.length, hash);
   logger.trace('Active parameters:', hash, p);
   let a = [...argv.args];
   logger.debug('# of fixed arguments:', a.length, hash);
