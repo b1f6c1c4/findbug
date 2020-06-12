@@ -61,7 +61,7 @@ const run = async (argv, lattice, runner) => {
     while (Object.keys(running).length < argv.maxProcs) {
       await check();
       logger.debug('Calling lattice.next()');
-      const n = await lattice.next();
+      const n = await lattice.next(argv.sup, argv.inf);
       if (!n) {
         logger.debug('No more suggestions, waiting for existing executions to finish');
         break;
@@ -85,7 +85,7 @@ const run = async (argv, lattice, runner) => {
 
     await lattice.log();
     if (!argv.exhaust) {
-      if (lattice.summary.suprema || lattice.summary.infima) {
+      if ((argv.sup && lattice.summary.suprema) || argv.inf && lattice.summary.infima) {
         logger.info('Supremum / Infimum found, stop running');
         break;
       }

@@ -58,16 +58,29 @@ class Lattice {
     this.prog.stdin.end();
   }
 
-  async next() {
-    await this.rlWrite('next');
-    const start = await this.rlRead();
-    if (!start) return null;
-    await this.rlWrite('cancelled');
-    const cancel = await this.rlReads();
-    return {
-      start,
-      cancel,
-    };
+  async next(sup, inf) {
+    for (let i = 0; i < 2; i++) {
+      let dir;
+      if (sup && !inf)
+        dir = 'd';
+      else if (inf && !sup)
+        dir = 'u';
+      else
+        dir = (this.nextUD ^= true) ? 'u' : 'd';
+      await this.rlWrite(`next ${dir}`);
+      const start = await this.rlRead();
+      if (start) {
+        await this.rlWrite('cancelled');
+        const cancel = await this.rlReads();
+        return {
+          start,
+          cancel,
+        };
+      }
+      if (sup ^ inf)
+        break;
+    }
+    return null;
   }
 
   async report(elem, val) {

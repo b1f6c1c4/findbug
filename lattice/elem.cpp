@@ -98,7 +98,7 @@ elem::iters<false> elem::downs() const {
 
 bool elem::operator==(const elem &b) const {
     for (const auto &[l, r]: zip(_v, b._v))
-        if (l != l)
+        if (l != r)
             return false;
     return true;
 }
@@ -109,6 +109,10 @@ bool elem::operator!=(const elem &b) const {
 
 void elem::set_size(size_t N) {
     _n = N;
+}
+
+size_t elem::get_size() const {
+    return _n;
 }
 
 size_t elem::hier() const {

@@ -379,6 +379,7 @@ if (argv.logFile) {
     logger.useLogFile(pl);
     logger.info('Truncated the log file:', pl);
   } else {
+    logger.useLogFile(pl);
     logger.info('Attached log file:', pl);
   }
 }
@@ -464,11 +465,15 @@ module.exports = async () => {
   }
 
   const op = path.join(argv.output, argv.resultFile);
-  logger.info('Writing to output file:', op);
-  await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
-    encoding: 'utf-8',
-    mode: '644',
-  });
+  if (argv.dryRun) {
+    logger.info('Would writing to output file:', op);
+  } else {
+    logger.info('Writing to output file:', op);
+    await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
+      encoding: 'utf-8',
+      mode: '644',
+    });
+  }
 
   logger.debug('Exiting...');
   return 0;

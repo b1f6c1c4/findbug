@@ -3,10 +3,10 @@
 template<>
 homo_set<true> &homo_set<true>::operator+=(const elem &el) {
     if (!(*this <= el)) {
-        std::erase_if(_els, [&el](const elem &e) {
+        std::erase_if(*this, [&el](const elem &e) {
             return e >= el;
         });
-        _els.push_back(el);
+        insert(el);
     }
     return *this;
 }
@@ -14,10 +14,10 @@ homo_set<true> &homo_set<true>::operator+=(const elem &el) {
 template<>
 homo_set<false> &homo_set<false>::operator+=(const elem &el) {
     if (!(*this >= el)) {
-        std::erase_if(_els, [&el](const elem &e) {
+        std::erase_if(*this, [&el](const elem &e) {
             return e <= el;
         });
-        _els.push_back(el);
+        insert(el);
     }
     return *this;
 }

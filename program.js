@@ -36,7 +36,7 @@ module.exports.execute = async (argv, p, hash, token = {}) => {
       await fs.access(fnres, fs.constants.R_OK);
       logger.info('Cache file found for execution #', hash);
       const res = await fs.readFile(fnres, 'utf-8');
-      logger.notice(`Result was >>${res}<< for (cached) execution #`, hash);
+      logger.notice('Result for (cached) execution:', res, hash);
       return res;
     } catch (e) {
       logger.debug('Cache file not found for execution #', hash, e);

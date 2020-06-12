@@ -73,6 +73,7 @@ public:
 
     [[nodiscard]] constexpr operator bool() const { return _n; }
     void set_size(size_t N);
+    [[nodiscard]] size_t get_size() const;
 
     [[nodiscard]] size_t hier() const;
 };

@@ -9,7 +9,7 @@ auto &operator<<(std::ostream &os, const homo_set<UD> &s) {
     return os;
 }
 
-auto &operator<<(std::ostream &os, const tri_set::set_t &s) {
+auto &operator<<(std::ostream &os, const set_t &s) {
     for (const auto &e : s)
         os << e << std::endl;
     return os;
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     char *end;
     size_t N = std::strtoull(argv[1], &end, 10);
     tri_set ts;
-    tri_set::set_t running;
+    set_t running;
 
     while (!std::cin.eof()) {
         std::string line;
@@ -67,9 +67,18 @@ int main(int argc, char **argv) {
             std::cout << ts.get_ds() << std::endl;
         } else if (line == "list running") {
             std::cout << running << std::endl;
-        } else if (line == "next") {
+        } else if (line == "next u") {
             elem e;
-            while ((e = ts.next()))
+            while ((e = ts.next_u()))
+                if (running.insert(e).second)
+                    break;
+            if (e)
+                std::cout << e << std::endl;
+            else
+                std::cout << std::endl;
+        } else if (line == "next d") {
+            elem e;
+            while ((e = ts.next_d()))
                 if (running.insert(e).second)
                     break;
             if (e)

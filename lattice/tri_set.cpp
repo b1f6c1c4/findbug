@@ -1,15 +1,5 @@
 #include "tri_set.hpp"
 
-size_t tri_set::aelem::prog() const {
-    return _ud ? hier() : _n - hier();
-}
-
-tri_set::aelem::aelem(const elem &el, bool ud) : elem{ el }, _ud{ ud } { }
-
-bool tri_set::aelem_hier_cmp::operator()(const aelem &l, const aelem &r) const {
-    return l.prog() > r.prog();
-}
-
 const homo_set<true> &tri_set::get_us() const {
     return _us;
 }
@@ -18,116 +8,200 @@ const homo_set<false> &tri_set::get_ds() const {
     return _ds;
 }
 
-const typename tri_set::set_t &tri_set::get_zs() const {
+const set_t &tri_set::get_zs() const {
     return _zs;
 }
 
-const tri_set::set_t &tri_set::get_sup() const {
+const set_t &tri_set::get_sup() const {
     return _sup;
 }
 
-const tri_set::set_t &tri_set::get_inf() const {
+const set_t &tri_set::get_inf() const {
     return _inf;
 }
 
-void tri_set::check_sup(const elem &el) {
+bool tri_set::check_sup(const elem &el) {
     // Note: el should be FALSE before proceed
     for (const auto &e : el.ups())
         if (!(e >= _us || _zs.contains(e)))
-            return;
+            return false;
     _sup.insert(el);
+    return true;
 }
 
-void tri_set::check_inf(const elem &el) {
+bool tri_set::check_inf(const elem &el) {
     // Note: el should be TRUE before proceed
     for (const auto &e : el.downs())
         if (!(e <= _ds || _zs.contains(e)))
-            return;
+            return false;
     _inf.insert(el);
+    return true;
 }
 
 bool tri_set::mark_true(const elem &el) {
+    _n = el.get_size();
     if (el <= _ds)
         return false;
 
-    set_t searched;
-    std::queue<elem> searching;
-    searching.push(el);
-    while (!searching.empty()) {
-        auto ex = searching.front();
-        searching.pop();
-        for (const auto &e : ex.downs())
-            if (!(e >= el))
-                _q.emplace(e, true);
-        for (const auto &e : ex.ups())
-            if (!(e >= _us) && !searched.contains(e)) {
-            searched.insert(e);
-            searching.push(e);
-        }
-    }
+    _ud = 0;
+    _ul.clear();
+    _dd = 0;
+    _dl.clear();
 
     _us += el;
-    check_inf(el);
+    if (!check_inf(el)) {
+        auto xa = el;
+        for (const auto &e : _us) {
+            auto x = el & e;
+            xa &= e;
+            if (!(x <= _ds) && !_zs.contains(x))
+                _uq.emplace(el, 0ll);
+        }
+        if (!(xa <= _ds) && !_zs.contains(xa))
+            _uq.emplace(el, 0ll);
+        for (const auto &e : el.downs())
+            if (!(e <= _ds) && !_zs.contains(e))
+                _uq.emplace(e, 0ll);
+    }
+
     for (const auto &e : el.downs())
-        if (e <= _ds)
+        if (_ds.contains(e))
             check_sup(e);
 
     return true;
 }
 
 bool tri_set::mark_false(const elem &el) {
+    _n = el.get_size();
     if (el >= _us)
         return false;
 
-    set_t searched;
-    std::queue<elem> searching;
-    searching.push(el);
-    while (!searching.empty()) {
-        auto ex = searching.front();
-        searching.pop();
-        for (const auto &e : ex.ups())
-            if (!(e <= el))
-                _q.emplace(e, false);
-        for (const auto &e : ex.downs())
-            if (!(e <= _ds) && !searched.contains(e)) {
-                searched.insert(e);
-                searching.push(e);
-            }
-    }
+    _ud = 0;
+    _ul.clear();
+    _dd = 0;
+    _dl.clear();
 
     _ds += el;
-    check_sup(el);
+    if (!check_sup(el)) {
+        auto xa = el;
+        for (const auto &e : _ds) {
+            auto x = el & e;
+            xa &= e;
+            if (!(x >= _us) && !_zs.contains(x))
+                _dq.emplace(el, 0ll);
+        }
+        if (!(xa >= _us) && !_zs.contains(xa))
+            _dq.emplace(el, 0ll);
+        for (const auto &e : el.ups())
+            if (!(e >= _us) && !_zs.contains(e))
+                _dq.emplace(e, 0ll);
+    }
+
     for (const auto &e : el.ups())
-        if (e >= _us)
+        if (_us.contains(e))
             check_inf(e);
 
     return true;
 }
 
 bool tri_set::mark_improbable(const elem &el) {
+    _n = el.get_size();
     if (el >= _us || el <= _ds)
         return false;
 
+    _ud = 0;
+    _ul.clear();
+    _dd = 0;
+    _dl.clear();
+
     _zs.insert(el);
+    for (const auto &e : el.downs())
+        if (!(e <= _ds) && !_zs.contains(e))
+            _uq.emplace(e, -(el.get_size() - el.hier()) / 2 - 1);
     for (const auto &e : el.ups())
-        if (e >= _us)
+        if (!(e >= _us) && !_zs.contains(e))
+            _dq.emplace(e, -el.hier() / 2 - 1);
+
+    for (const auto &e : el.ups())
+        if (_us.contains(e))
             check_inf(e);
     for (const auto &e : el.downs())
-        if (e <= _ds)
+        if (_ds.contains(e))
             check_sup(e);
 
     return true;
 }
 
-elem tri_set::next() {
-    while (!_q.empty()) {
-        elem el{ _q.top() };
-        _q.pop();
-        if (el >= _us || el <= _ds || _zs.contains(el))
-            continue;
-        return el;
+elem tri_set::next_u() {
+    while (!_uq.empty()) {
+        auto el = _uq.top();
+        _uq.pop();
+        if (!(el >= _us || el <= _ds || _zs.contains(el)))
+            return el;
     }
-    return {};
+
+    if (_ud > _n)
+        return {};
+
+    const auto &curr = _ud ? _ul : _us;
+
+    set_t next;
+    for (const auto &el : curr)
+        for (const elem &eu : el.ups()) {
+            auto flag = true;
+            for (const elem &e : _us)
+                if (e != el && eu >= e) {
+                    flag = false;
+                    break;
+                }
+            if (!flag)
+                continue;
+            next.insert(eu);
+            for (const elem &e : eu.downs())
+                if (!(el >= _us || el <= _ds || _zs.contains(el)))
+                    _uq.emplace(el, -_ud - 1ull);
+        }
+
+    _ud++;
+    _ul = std::move(next);
+
+    return next_u();
+}
+
+elem tri_set::next_d() {
+    while (!_dq.empty()) {
+        auto el = _dq.top();
+        _dq.pop();
+        if (!(el >= _us || el <= _ds || _zs.contains(el)))
+            return el;
+    }
+
+    if (_dd > _n)
+        return {};
+
+    const auto &curr = _dd ? _dl : _ds;
+
+    set_t next;
+    for (const auto &el : curr)
+        for (const elem &ed : el.downs()) {
+            auto flag = true;
+            for (const elem &e : _ds)
+                if (e != el && ed <= e) {
+                    flag = false;
+                    break;
+                }
+            if (!flag)
+                continue;
+            next.insert(ed);
+            for (const elem &e : ed.ups())
+                if (!(el >= _ds || el <= _ds || _zs.contains(el)))
+                    _dq.emplace(el, -_dd - 1ull);
+        }
+
+    _dd++;
+    _dl = std::move(next);
+
+    return next_d();
 }
 
 bool tri_set::is_decided(const elem &el) const {
