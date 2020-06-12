@@ -125,6 +125,6 @@ size_t elem::hier() const {
 size_t elem::hasher::operator()(const elem &el) const {
     size_t h{ 0 };
     for (auto v : el._v)
-        h = (h >> 59ull) | v | (h << 5ull);
+        h = v | (h << 5ull);
     return h;
 }

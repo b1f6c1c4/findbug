@@ -134,7 +134,7 @@ bool tri_set::mark_improbable(const elem &el) {
 
 elem tri_set::next_u() {
     while (!_uq.empty()) {
-        auto el = _uq.top();
+        auto &el = _uq.top();
         _uq.pop();
         if (!(el >= _us || el <= _ds || _zs.contains(el)))
             return el;
@@ -159,7 +159,7 @@ elem tri_set::next_u() {
             next.insert(eu);
             for (const elem &e : eu.downs())
                 if (!(el >= _us || el <= _ds || _zs.contains(el)))
-                    _uq.emplace(el, -_ud - 1ull);
+                    _uq.emplace(e, -_ud - 1ull);
         }
 
     _ud++;
@@ -170,7 +170,7 @@ elem tri_set::next_u() {
 
 elem tri_set::next_d() {
     while (!_dq.empty()) {
-        auto el = _dq.top();
+        auto &el = _dq.top();
         _dq.pop();
         if (!(el >= _us || el <= _ds || _zs.contains(el)))
             return el;
@@ -195,7 +195,7 @@ elem tri_set::next_d() {
             next.insert(ed);
             for (const elem &e : ed.ups())
                 if (!(el >= _ds || el <= _ds || _zs.contains(el)))
-                    _dq.emplace(el, -_dd - 1ull);
+                    _dq.emplace(e, -_dd - 1ull);
         }
 
     _dd++;

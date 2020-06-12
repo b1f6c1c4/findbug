@@ -27,11 +27,11 @@ public:
 	{
 		return std::apply([](auto & ... x){return std::tie(*x ...);}, _it);
 	}
-	auto operator==(const zipped_iter<Iters ...> &other)
+	auto operator==(const zipped_iter<Iters ...> &other) const
 	{
 		return std::get<0>(_it) == std::get<0>(other._it);
 	}
-	auto operator!=(const zipped_iter<Iters ...> &other)
+	auto operator!=(const zipped_iter<Iters ...> &other) const
 	{
 		return !(operator==(other));
 	}
