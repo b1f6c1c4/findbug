@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-require('../')().then((c) => {
+require('../src')().then((c) => {
   setTimeout(() => process.exit(c), 10);
 });

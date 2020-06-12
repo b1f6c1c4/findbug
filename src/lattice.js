@@ -59,7 +59,7 @@ class LatticeWasm extends LatticeBase {
   constructor() {
     super();
     logger.debug('Loading lattice wasm from:', path.join(__dirname, 'lattice.wasm.js'));
-    this.Module = require('./lattice.wasm')().then((prog) => {
+    this.Module = require('../build/lattice.wasm')().then((prog) => {
       logger.debug('Lattice wasm loaded successfully');
       return prog;
     }).catch((e) => {

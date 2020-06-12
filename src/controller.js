@@ -4,7 +4,7 @@ const Bottleneck = require('bottleneck');
 const Combinatorics = require('js-combinatorics');
 const parameter = require('./parameter');
 const program = require('./program');
-const Lattice = require('./latticeWrapper');
+const Lattice = require('./lattice');
 const logger = require('./logger')('controller');
 
 const makeLattice = async (argv, N) => {
