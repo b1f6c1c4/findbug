@@ -51,19 +51,22 @@ const run = async (argv, lattice, runner) => {
       }
     }
   };
+  const joinOne = async () => {
+    logger.notice('Waiting for an execution to finish, currently running:', Object.keys(running).length);
+    await Promise.race(Object.values(running).map((r) => r.promise));
+    await check();
+  };
   do {
     await check();
     if (!maybeNext) {
-      logger.debug('Waiting for an execution to finish');
-      await Promise.race(Object.values(running).map((r) => r.promise));
-      await check();
+      logger.debug('No more suggestions:', Object.keys(running).length);
+      await joinOne();
+    } else if (Object.keys(running).length >= argv.maxProcs) {
+      logger.debug('No more execution slots:', argv.maxProcs);
+      await joinOne();
     }
 
-    if (Object.keys(running).length < argv.maxProcs) {
-      logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
-    } else {
-      logger.debug('No more execution slots:', argv.maxProcs);
-    }
+    logger.info('Asking for the next moves:', Object.keys(running).length, argv.maxProcs);
     while (Object.keys(running).length < argv.maxProcs) {
       await check();
       logger.debug('Calling lattice.next()');
@@ -95,6 +98,16 @@ const run = async (argv, lattice, runner) => {
       await lattice.log();
       if ((argv.sup && lattice.summary.suprema) || argv.inf && lattice.summary.infima) {
         logger.info('Supremum / Infimum found, stop running');
+        logger.info('Cancelling all running jobs');
+        Object.keys(running).forEach((c) => {
+          const r = running[c];
+          if (r && r.token && r.token.cancel) {
+            r.token.cancel();
+            delete running[c];
+          } else {
+            logger.warning('Execution already quitted:', c);
+          }
+        });
         break;
       }
     } else {

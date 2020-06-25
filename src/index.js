@@ -278,6 +278,32 @@ This option cannot be used together with --sup nor --inf. \
     }
     return true;
   })
+  .check((argv) => {
+    if (argv.truncate && !argv.logFile) {
+      throw new Error('Argument check failed: You cannot use both --no-log-file and --truncate');
+    }
+    if (!argv.output) {
+      if (argv.prune) {
+        throw new Error('Argument check failed: You cannot use both --prune and --no-output');
+      }
+      if (argv.cache) {
+        throw new Error('Argument check failed: You need --no-cache if you\'v specified --no-output');
+      }
+      if (argv.recordStdout) {
+        throw new Error('Argument check failed: You need --no-record-stdout if you\'v specified --no-output');
+      }
+      if (argv.recordStderr) {
+        throw new Error('Argument check failed: You need --no-record-stderr if you\'v specified --no-output');
+      }
+      if (argv.logFile) {
+        throw new Error('Argument check failed: You need --no-log-file if you\'v specified --no-output');
+      }
+      if (argv.resultFile) {
+        throw new Error('Argument check failed: You need --no-result-file if you\'v specified --no-output');
+      }
+    }
+    return true;
+  })
   .epilog('Choosing between -c/-C/-F as well as -m/-M:')
   .epilog(`
   Use -c if the target program is more likely to fail on small inputs.
@@ -365,9 +391,13 @@ if (argv.prune) {
   }
 }
 
-logger.info('Creating the output directory:', argv.output);
-mkdirp.sync(argv.output);
-logger.debug('Created the output directory:', argv.output);
+if (argv.output) {
+  logger.info('Creating the output directory:', argv.output);
+  mkdirp.sync(argv.output);
+  logger.debug('Created the output directory:', argv.output);
+} else {
+  logger.debug('Skipped creating the output directory');
+}
 
 if (argv.logFile) {
   const pl = path.join(argv.output, argv.logFile);
@@ -464,15 +494,19 @@ module.exports = async () => {
     }
   }
 
-  const op = path.join(argv.output, argv.resultFile);
-  if (argv.dryRun) {
-    logger.info('Would writing to output file:', op);
+  if (argv.resultFile) {
+    const op = path.join(argv.output, argv.resultFile);
+    if (argv.dryRun) {
+      logger.info('Would writing to output file:', op);
+    } else {
+      logger.info('Writing to output file:', op);
+      await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
+        encoding: 'utf-8',
+        mode: '644',
+      });
+    }
   } else {
-    logger.info('Writing to output file:', op);
-    await fs.promises.writeFile(op, JSON.stringify(result, null, 2), {
-      encoding: 'utf-8',
-      mode: '644',
-    });
+    logger.info('Skipped writing to result file');
   }
 
   logger.info('Drafting a nice summary report');
@@ -487,27 +521,35 @@ module.exports = async () => {
     return chalk`$ {bold {yellow ${g}}}{gray ${a}} {bold <<"EOF"}\n${p.join('\n')}\n{bold EOF}`;
   };
   if (argv.sup) {
-    result.suprema.forEach((p) => {
-      if (argv.co) {
-        console.log(chalk`{cyan # The following} {red failed}{cyan , but} {green won't for more items}:`);
-      } else {
-        console.log(chalk`{cyan # The following} {green succeeded}{cyan , but} {red won't for more items}:`);
-      }
-      console.log(prog(p));
-    });
+    if (argv.dryRun) {
+      logger.info('Would write out suprema command lines, one by another');
+    } else {
+      result.suprema.forEach((p) => {
+        if (argv.co) {
+          console.log(chalk`{cyan # The following} {red failed}{cyan , but} {green won't for more items}:`);
+        } else {
+          console.log(chalk`{cyan # The following} {green succeeded}{cyan , but} {red won't for more items}:`);
+        }
+        console.log(prog(p));
+      });
+    }
   }
   if (argv.inf) {
-    result.infima.forEach((p) => {
-      const ag = !argv.one || p.length !== 1;
-      if (argv.co) {
-        const aug = ag ? chalk`{cyan , but} {red won't for fewer items}` : '';
-        console.log(chalk`{cyan # The following} {bold {green succeeded}}${aug}:`);
-      } else {
-        const aug = ag ? chalk`{cyan , but} {green won't for fewer items}` : '';
-        console.log(chalk`{cyan # The following} {bold {red failed}}${aug}:`);
-      }
-      console.log(prog(p));
-    });
+    if (argv.dryRun) {
+      logger.info('Would write out infima command lines, one by another');
+    } else {
+      result.infima.forEach((p) => {
+        const ag = !argv.one || p.length !== 1;
+        if (argv.co) {
+          const aug = ag ? chalk`{cyan , but} {red won't for fewer items}` : '';
+          console.log(chalk`{cyan # The following} {bold {green succeeded}}${aug}:`);
+        } else {
+          const aug = ag ? chalk`{cyan , but} {green won't for fewer items}` : '';
+          console.log(chalk`{cyan # The following} {bold {red failed}}${aug}:`);
+        }
+        console.log(prog(p));
+      });
+    }
   }
 
   logger.debug('Exiting...');
