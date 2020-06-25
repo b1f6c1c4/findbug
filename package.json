@@ -1,5 +1,5 @@
 {
-  "name": "findbug",
+  "name": "@b1f6c1c4/findbug",
   "version": "0.0.3",
   "description": "Locate bug(s) for any program with YES/NO feedback only.",
   "main": "index.js",
@@ -21,6 +21,9 @@
   ],
   "author": "b1f6c1c4 <b1f6c1c4@gmail.com>",
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "dependencies": {
     "bottleneck": "^2.19.5",
     "chalk": "^4.1.0",
