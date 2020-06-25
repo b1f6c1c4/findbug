@@ -49,8 +49,8 @@ Program Execution Control:
 Debug Parameter Control:
   -a, --arg-file  Read parameters from file instead of stdin.           [string]
   -X, --in-place  Use the arguments as parameters.                     [boolean]
-  -s, --split     Split parameters when applying to the program.       [boolean]
-  -d, --split-by  What to use to split a parameter.                     [string]
+  -s, --split     Split parameters (with bash-like rules) when applying
+                  parameters to the program. Only works with -x.       [boolean]
 
 Success / Failure / Error Detection:
   -z, --zero        Meaning of getting zero exit code.
@@ -90,8 +90,10 @@ Searching Strategies and a priori Assumptions:
                                                                        [boolean]
 
 Output and Cache Control:
-  -v, --verbose        Increase verbosity by 1. Maximum verbosity -vvv.  [count]
-  -q, --quiet          Decrease verbosity by 1. Minimum verbosity -qqqq. [count]
+  -v, --verbose        Increase console verbosity. Max. -vvv.            [count]
+  -q, --quiet          Decrease console verbosity. Min. -qqqq.           [count]
+  -V, --log-verbose    Increase log file verbosity. Max. -VV.            [count]
+  -Q, --log-quiet      Decrease log file verbosity. Min. -QQQQQ.         [count]
   -S, --summary        Write a nice summary report to stdout when finish.
                                                                        [boolean]
   -w, --output         A directory to store program outputs, also used as cache.

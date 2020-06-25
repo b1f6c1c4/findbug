@@ -79,7 +79,7 @@ class LatticeBase {
     await this.listImpl(logger.debug, 'suprema', 'supremum');
     await this.listImpl(logger.debug, 'infima', 'infimum');
 
-    if (logger.getLevel() < 6) return;
+    if (logger.getMaxLevel() < 6) return;
     await this.listImpl(logger.trace, 'true');
     await this.listImpl(logger.trace, 'improbable');
     await this.listImpl(logger.trace, 'false');

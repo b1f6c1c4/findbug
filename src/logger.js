@@ -73,6 +73,9 @@ const logger = createLogger({
 let gsLevel = 'notice';
 let gLevel = lvls.levels[gsLevel];
 
+let gfsLevel = 'notice';
+let gfLevel = lvls.levels[gfsLevel];
+
 module.exports = (lbl) => {
   const regularize = (k) => (msg, ...data) => {
     let message = msg;
@@ -87,23 +90,32 @@ module.exports = (lbl) => {
     });
   };
   const customApi = { };
-  customApi.getLevel = () => gLevel;
+  customApi.getMaxLevel = () => Math.max(gLevel, gfLevel);
   customApi.setLevel = (level) => {
     if (level === null) {
       gLevel = -1;
       tc.level = gsLevel = 'fatal';
-      tf.forEach((t) => { t.level = 'fatal'; });
       tc.silent = true;
     } else {
       gLevel = lvls.levels[level];
       tc.level = gsLevel = level;
-      tf.forEach((t) => { t.level = level; });
       tc.silent = false;
+    }
+  };
+  customApi.setFileLevel = (level) => {
+    if (level === null) {
+      gfLevel = -1;
+      gfsLevel = 'fatal';
+      tf.forEach((t) => { t.level = 'fatal'; });
+    } else {
+      gfLevel = lvls.levels[level];
+      gfsLevel = level;
+      tf.forEach((t) => { t.level = level; });
     }
   };
   customApi.useLogFile = (filename) => {
     const t = new transports.File({
-      level: gsLevel,
+      level: gfsLevel,
       filename,
     });
     tf.push(t);

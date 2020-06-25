@@ -47,7 +47,7 @@ const argv = yargs
     describe: 'At least one parameter is required to run the program.',
     type: 'boolean',
   })
-  .group(['arg-file', 'in-place', 'split', 'split-by'], 'Debug Parameter Control:')
+  .group(['arg-file', 'in-place', 'split'], 'Debug Parameter Control:')
   .option('a', {
     alias: 'arg-file',
     describe: 'Read parameters from file instead of stdin.',
@@ -60,7 +60,7 @@ const argv = yargs
   })
   .option('s', {
     alias: 'split',
-    describe: 'Split parameters (with bash-like rules) when applying to the program.',
+    describe: 'Split parameters (with bash-like rules) when applying parameters to the program. Only works with -x.',
     type: 'boolean',
   })
   .implies('split', 'xargs')
@@ -158,6 +158,8 @@ This option cannot be used together with --sup nor --inf. \
   .group([
     'verbose',
     'quiet',
+    'log-verbose',
+    'log-quiet',
     'summary',
     'output',
     'result-file',
@@ -170,15 +172,26 @@ This option cannot be used together with --sup nor --inf. \
   ], 'Output and Cache Control:')
   .option('v', {
     alias: 'verbose',
-    describe: 'Increase verbosity by 1. Maximum verbosity -vvv.',
+    describe: 'Increase console verbosity. Max. -vvv.',
     type: 'boolean',
   })
   .option('q', {
     alias: 'quiet',
-    describe: 'Decrease verbosity by 1. Minimum verbosity -qqqq.',
+    describe: 'Decrease console verbosity. Min. -qqqq.',
     type: 'boolean',
   })
   .count(['v', 'q'])
+  .option('V', {
+    alias: 'log-verbose',
+    describe: 'Increase log file verbosity. Max. -VV.',
+    type: 'boolean',
+  })
+  .option('Q', {
+    alias: 'log-quiet',
+    describe: 'Decrease log file verbosity. Min. -QQQQQ.',
+    type: 'boolean',
+  })
+  .count(['V', 'Q'])
   .option('S', {
     alias: 'summary',
     describe: 'Write a nice summary report to stdout when finish.',
@@ -231,9 +244,14 @@ This option cannot be used together with --sup nor --inf. \
     type: 'boolean',
   })
   .check((argv) => {
-    if (argv.verbose > 0 && argv.quiet > 0)
+    if (argv.verbose > 0 && argv.quiet > 0) {
       throw new Error('Argument check failed: You cannot specify both of -v and -q');
+    }
+    if (argv.logVerbose > 0 && argv.logQuiet > 0) {
+      throw new Error('Argument check failed: You cannot specify both of -V and -Q');
+    }
     argv.verbosity = argv.verbose - argv.quiet;
+    argv.logVerbosity = argv.logVerbose - argv.logQuiet + 1;
     return true;
   })
   .check((argv) => {
@@ -279,6 +297,9 @@ This option cannot be used together with --sup nor --inf. \
     return true;
   })
   .check((argv) => {
+    if (argv.logVerbose + argv.logQuiet > 0 && !argv.logFile) {
+      throw new Error('Argument check failed: You cannot use --no-log-file with -V and/or -Q');
+    }
     if (argv.truncate && !argv.logFile) {
       throw new Error('Argument check failed: You cannot use both --no-log-file and --truncate');
     }
@@ -379,6 +400,24 @@ if (argv.verbosity >= 3) {
   logger.setLevel('fatal');
 } else {
   logger.setLevel(null);
+}
+
+if (argv.logVerbosity >= 3) {
+  logger.setFileLevel('trace');
+} else if (argv.logVerbosity >= 2) {
+  logger.setFileLevel('debug');
+} else if (argv.logVerbosity >= 1) {
+  logger.setFileLevel('info');
+} else if (argv.logVerbosity >= 0) {
+  logger.setFileLevel('notice');
+} else if (argv.logVerbosity >= -1) {
+  logger.setFileLevel('warning');
+} else if (argv.logVerbosity >= -2) {
+  logger.setFileLevel('error');
+} else if (argv.logVerbosity >= -3) {
+  logger.setFileLevel('fatal');
+} else {
+  logger.setFileLevel(null);
 }
 
 if (argv.prune) {
