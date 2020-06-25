@@ -1,6 +1,6 @@
 {
   "name": "findbug",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Locate bug(s) for any program with YES/NO feedback only.",
   "main": "index.js",
   "bin": {
